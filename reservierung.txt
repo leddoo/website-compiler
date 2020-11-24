@@ -1,6 +1,6 @@
 module path: "termine"
 
-(form_list_item name: "name", body: {
+(def_form_list_item name: "name", body: {
     (form_field
         type: "text",
         id: "given_name",
@@ -17,7 +17,7 @@ module path: "termine"
     )
 })
 
-(form name: "reservierung", body: {
+(def_form name: "reservierung", body: {
     (form_field
         type: "locked",
         id: "email",
@@ -58,9 +58,9 @@ module path: "termine"
     )
 })
 
-(page name: "reservierung", body: {
+(def_page name: "reservierung", body: {
     text type: "h1", value: "Buchung Schulführung"
     spacer desktop: 4, mobile: 3
-    form name: "reservierung"
+    form id: "form", name: "reservierung"
 })
 

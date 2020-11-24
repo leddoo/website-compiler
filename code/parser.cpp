@@ -1,4 +1,5 @@
 #include "parser.hpp"
+#include "context.hpp"
 
 #include <cstdio>
 
@@ -133,7 +134,7 @@ bool is_valid(const Expression &e) {
     return e.type != 0;
 }
 
-Expression parse_expression(Reader<Token> &reader, Parse_Context &context) {
+Expression parse_expression(Reader<Token> &reader) {
     if(skip_eol(reader) < 1) {
         printf("Unexpected end of file.\n");
         return {};
@@ -171,8 +172,11 @@ Expression parse_expression(Reader<Token> &reader, Parse_Context &context) {
     auto reached_eof = false;
     auto was_last = false;
 
+    context.next_expression_id += 1;
+    auto own_id = context.next_expression_id;
+
     // NOTE(llw): Parse arguments.
-    auto arguments = create_array<Argument>(context.arena);
+    auto arguments = create_map<Interned_String, Argument>(context.arena);
     while(reader.current < reader.end) {
 
         if(is_multi_line && skip_eol(reader) < 1) {
@@ -197,6 +201,7 @@ Expression parse_expression(Reader<Token> &reader, Parse_Context &context) {
             }
 
             auto result = Expression {};
+            result.id = own_id;
             result.type = type;
             result.arguments = arguments;
             return result;
@@ -224,8 +229,8 @@ Expression parse_expression(Reader<Token> &reader, Parse_Context &context) {
             return {};
         }
 
+        auto arg_name = t0.string;
         auto arg = Argument {};
-        arg.name  = t0.string;
         arg.value = t2.string;
 
         if(t2.type == TOKEN_ATOM) {
@@ -238,7 +243,7 @@ Expression parse_expression(Reader<Token> &reader, Parse_Context &context) {
             arg.type = ARG_NUMBER;
         }
         else if(t2.string == context.strings.curly_open) {
-            arg.type = ARG_EXPR_LIST;
+            arg.type = ARG_LIST;
             arg.expressions = create_array<Expression>(context.arena);
 
             auto success = false;
@@ -255,10 +260,12 @@ Expression parse_expression(Reader<Token> &reader, Parse_Context &context) {
                     break;
                 }
 
-                auto expr = parse_expression(reader, context);
+                auto expr = parse_expression(reader);
                 if(!is_valid(expr)) {
                     break;
                 }
+
+                expr.parent = own_id;
 
                 push(arg.expressions, expr);
             }
@@ -273,7 +280,11 @@ Expression parse_expression(Reader<Token> &reader, Parse_Context &context) {
             return {};
         }
 
-        push(arguments, arg);
+        if(has(arguments, arg_name)) {
+            printf("Argument provided multiple times.\n");
+            return {};
+        }
+        insert(arguments, arg_name, arg);
 
         // NOTE(llw): Try to consume ','.
         if(    reader.current < reader.end
@@ -314,13 +325,14 @@ void print_expression(const Expression &expr, String_Table &string_table, Unsign
     for(Usize i = 0; i < arguments.count; i += 1) {
         do_indent();
 
-        auto arg = arguments[i];
+        auto arg_name = arguments.entries[i].key;
+        auto arg      = arguments.entries[i].value;
 
-        auto name = string_table[arg.name];
+        auto name = string_table[arg_name];
         printf("name: %.*s, type: ", (int)name.size, name.values);
 
-        if(arg.type == ARG_EXPR_LIST) {
-            printf("expression_list\n");
+        if(arg.type == ARG_LIST) {
+            printf("list\n");
 
             auto &expressions = arg.expressions;
             for(Usize i = 0; i < expressions.count; i += 1) {
@@ -332,7 +344,7 @@ void print_expression(const Expression &expr, String_Table &string_table, Unsign
                 case ARG_ATOM: { printf("atom"); } break;
                 case ARG_STRING: { printf("string"); } break;
                 case ARG_NUMBER: { printf("number"); } break;
-                case ARG_EXPR_LIST: assert(false);
+                case ARG_LIST: assert(false);
             }
 
             auto value = string_table[arg.value];
@@ -341,7 +353,7 @@ void print_expression(const Expression &expr, String_Table &string_table, Unsign
     }
 }
 
-bool parse(Parse_Context &context, const Array<U8> &buffer) {
+bool parse(const Array<U8> &buffer) {
     auto tokens = create_array<Token>(context.temporary);
     if(!tokenize(context.string_table, buffer, tokens)) {
         return false;
@@ -361,7 +373,7 @@ bool parse(Parse_Context &context, const Array<U8> &buffer) {
     };
     while(token_reader.current < token_reader.end) {
 
-        auto expr = parse_expression(token_reader, context);
+        auto expr = parse_expression(token_reader);
         if(!is_valid(expr)) {
             return false;
         }
@@ -374,25 +386,5 @@ bool parse(Parse_Context &context, const Array<U8> &buffer) {
     }
 
     return true;
-}
-
-
-
-Parse_Context create_parse_context(Arena &arena) {
-    auto result = Parse_Context {};
-    result.arena = arena;
-    result.temporary = create_arena();
-    result.string_table = create_string_table(arena);
-    result.expressions = { &arena };
-
-    result.strings.dot    = intern(result.string_table, STRING("."));
-    result.strings.comma  = intern(result.string_table, STRING(","));
-    result.strings.colon  = intern(result.string_table, STRING(":"));
-    result.strings.paren_open  = intern(result.string_table, STRING("("));
-    result.strings.paren_close = intern(result.string_table, STRING(")"));
-    result.strings.curly_open  = intern(result.string_table, STRING("{"));
-    result.strings.curly_close = intern(result.string_table, STRING("}"));
-
-    return result;
 }
 

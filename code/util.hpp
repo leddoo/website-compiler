@@ -100,3 +100,22 @@ _inline String str(const U8 *begin, const U8 *end) {
     return result;
 }
 
+_inline String str(Array<U8> array) {
+    auto result = String {
+        array.values,
+        array.count,
+    };
+    return result;
+}
+
+_inline void push_bytes(Array<U8> &array, const U8 *src, Usize size) {
+    auto old_count = array.count;
+    set_count(array, array.count + size);
+    auto dest = array.values + old_count;
+    copy_values(dest, src, size);
+}
+
+_inline void push(Array<U8> &array, String string) {
+    push_bytes(array, string.values, string.size);
+}
+

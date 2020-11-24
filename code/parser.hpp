@@ -12,7 +12,7 @@ enum Argument_Type {
     ARG_ATOM,
     ARG_STRING,
     ARG_NUMBER,
-    ARG_EXPR_LIST,
+    ARG_LIST,
 };
 
 struct Argument {
@@ -20,34 +20,16 @@ struct Argument {
         Array<Expression> expressions;
         Interned_String value;
     };
-
-    Interned_String name;
     Argument_Type type;
 };
 
 
 struct Expression {
+    U32 id;
+    U32 parent;
     Interned_String type;
-    Array<Argument> arguments;
+    Map<Interned_String, Argument> arguments;
 };
 
-bool parse(Parse_Context &context, const Array<U8> &buffer);
-
-
-struct Parse_Context {
-    Arena arena;
-    Arena temporary;
-
-    String_Table string_table;
-    struct {
-        Interned_String
-            dot, comma, colon,
-            paren_open, paren_close,
-            curly_open, curly_close;
-    } strings;
-
-    Array<Expression> expressions;
-};
-
-Parse_Context create_parse_context(Arena &arena);
+bool parse(const Array<U8> &buffer);
 

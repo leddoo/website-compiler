@@ -39,7 +39,7 @@ set libcpp_sources=^
 
 set libcpp=/I%libcpp_root%
 
-set sources=..\code\main.cpp ..\code\util.cpp ..\code\parser.cpp
+set sources=..\code\main.cpp ..\code\util.cpp ..\code\parser.cpp ..\code\context.cpp
 
 cl %sources% %libcpp_sources% User32.lib /I..\code %libcpp% %compile_flags_debug% /link %link_flags% /out:main.exe
 

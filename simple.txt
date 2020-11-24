@@ -1,6 +1,7 @@
-(page name: "reservierung", body: {
-    text type: "h1", value: "Title"
+(def_page name: "reservierung", body: {
+    text id: "foo", type: "h1", value: "Title"
     spacer desktop: 4, mobile: 3
-    text type: "p", value: "Have a paragraph!"
+    text global_id: "bar", type: "p", value: "Have a paragraph!"
+    spacer value: 1
 })
 
