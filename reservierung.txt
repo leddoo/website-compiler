@@ -1,0 +1,66 @@
+module path: "termine"
+
+(form_list_item name: "name", body: {
+    (form_field
+        type: "text",
+        id: "given_name",
+        title: "Vorname",
+        min: 1,
+        max: 64,
+    )
+    (form_field
+        type: "text",
+        id: "surname",
+        title: "Nachname",
+        min: 1,
+        max: 64,
+    )
+})
+
+(form name: "reservierung", body: {
+    (form_field
+        type: "locked",
+        id: "email",
+        title: "E-Mail Adresse",
+        value: "",
+    )
+    (form_field
+        type: "select",
+        id: "date",
+        title: "Termin",
+    )
+    (form_field
+        type: "text",
+        id: "phone",
+        title: "Telefon",
+        min: 1,
+        max: 32,
+    )
+    (form_field
+        type: "text",
+        id: "address",
+        title: "Adresse",
+        min: 1,
+        max: 128,
+    )
+    (form_list
+        type: "name",
+        id: "names",
+        title: "Personen",
+        initial: {
+            name given_name: "", surname: ""
+        },
+        min: 1,
+        max: 10,
+    )
+    (form_submit
+        text: "Reservieren",
+    )
+})
+
+(page name: "reservierung", body: {
+    text type: "h1", value: "Buchung Schulführung"
+    spacer desktop: 4, mobile: 3
+    form name: "reservierung"
+})
+
