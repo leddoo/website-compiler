@@ -47,6 +47,7 @@ _inline bool is_arg_type(Argument *arg, Argument_Type t) {
 _inline bool is_atom  (Argument *arg) { return is_arg_type(arg, ARG_ATOM); }
 _inline bool is_string(Argument *arg) { return is_arg_type(arg, ARG_STRING); }
 _inline bool is_number(Argument *arg) { return is_arg_type(arg, ARG_NUMBER); }
+_inline bool is_block (Argument *arg) { return is_arg_type(arg, ARG_BLOCK); }
 _inline bool is_list  (Argument *arg) { return is_arg_type(arg, ARG_LIST); }
 
 bool analyze(Expression &expr) {
@@ -69,13 +70,13 @@ bool analyze(Expression &expr) {
         auto name = get_pointer(args, context.strings.name);
         auto body = get_pointer(args, context.strings.body);
         if(    !is_string(name)
-            || !is_list(body)
+            || !is_block(body)
         ) {
             printf("Invalid def_page expression.\n");
             return false;
         }
 
-        auto &children = body->expressions;
+        auto &children = body->block;
 
         if(!check_ids(children)) {
             return false;
@@ -186,7 +187,7 @@ void generate_html(const Expression &expr, Interned_String parent, Usize indent 
         print_id();
         printf(">\n");
 
-        const auto &children = args[context.strings.body].expressions;
+        const auto &children = args[context.strings.body].block;
         for(Usize i = 0; i < children.count; i += 1) {
             generate_html(children[i], id, indent + 1);
         }

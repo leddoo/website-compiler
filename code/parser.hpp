@@ -4,7 +4,6 @@
 
 #include <libcpp/memory/arena.hpp>
 
-struct Parse_Context;
 struct Expression;
 
 
@@ -12,13 +11,20 @@ enum Argument_Type {
     ARG_ATOM,
     ARG_STRING,
     ARG_NUMBER,
+    ARG_BLOCK,
     ARG_LIST,
+};
+
+struct Simple_Argument {
+    Interned_String value;
+    Argument_Type type;
 };
 
 struct Argument {
     union {
-        Array<Expression> expressions;
-        Interned_String value;
+        Interned_String       value;
+        Array<Expression>     block;
+        Array<Simple_Argument> list;
     };
     Argument_Type type;
 };

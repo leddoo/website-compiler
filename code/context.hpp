@@ -16,6 +16,7 @@ extern struct Context {
             dot, comma, colon,
             paren_open, paren_close,
             curly_open, curly_close,
+            square_open, square_close,
             id, global_id,
             name, body,
             type, value,
@@ -23,12 +24,13 @@ extern struct Context {
             def_page,
             text, spacer,
             spacer_same, spacer_desktop_mobile,
-            h1, p;
+            h1, p, span;
     } strings;
 
     Map<Interned_String, int> valid_text_types;
 
 
+    // Parser
     U32 next_expression_id;
     Array<Expression> expressions;
 

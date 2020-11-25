@@ -111,6 +111,13 @@ static bool tokenize(
         push(result, token);
     }
 
+    // NOTE(llw): Extra tokens for lookahead.
+    for(Usize i = 0; i < 2; i += 1) {
+        auto eol = Token {};
+        eol.type = TOKEN_EOL;
+        push(result, eol);
+    }
+
     return true;
 }
 
@@ -243,11 +250,11 @@ Expression parse_expression(Reader<Token> &reader) {
             arg.type = ARG_NUMBER;
         }
         else if(t2.string == context.strings.curly_open) {
-            arg.type = ARG_LIST;
-            arg.expressions = create_array<Expression>(context.arena);
+            arg.type = ARG_BLOCK;
+            arg.block = create_array<Expression>(context.arena);
 
             auto success = false;
-            while(reader.current < reader.end) {
+            while(true) {
 
                 if(skip_eol(reader) < 1) {
                     reached_eof = true;
@@ -267,13 +274,71 @@ Expression parse_expression(Reader<Token> &reader) {
 
                 expr.parent = own_id;
 
-                push(arg.expressions, expr);
+                push(arg.block, expr);
             }
 
             if(!success) {
                 break;
             }
 
+        }
+        else if(t2.string == context.strings.square_open) {
+            arg.type = ARG_LIST;
+            arg.list = create_array<Simple_Argument>(context.arena);
+
+            auto success = false;
+            auto was_last = false;
+            while(true) {
+
+                if(skip_eol(reader) < 2) {
+                    reached_eof = true;
+                    break;
+                }
+
+                auto t0 = reader.current[0];
+                auto t1 = reader.current[1];
+
+                if(t0.string == context.strings.square_close) {
+                    reader.current += 1;
+                    success = true;
+                    break;
+                }
+
+                if(was_last) {
+                    printf("Comma missing after list item.\n");
+                    break;
+                }
+
+                auto value = Simple_Argument {};
+                value.value = t0.string;
+
+                if(t0.type == TOKEN_ATOM) {
+                    value.type = ARG_ATOM;
+                }
+                else if(t0.type == TOKEN_STRING) {
+                    value.type = ARG_STRING;
+                }
+                else if(t0.type == TOKEN_NUMBER) {
+                    value.type = ARG_NUMBER;
+                }
+                else {
+                    printf("Invalid list item.\n");
+                    break;
+                }
+
+                // NOTE(llw): Consume value.
+                reader.current += 1;
+
+                push(arg.list, value);
+
+                if(t1.string == context.strings.comma) {
+                    reader.current += 1;
+                }
+                else {
+                    was_last = true;
+                }
+
+            }
         }
         else {
             printf("Invalid argument value.\n");
@@ -306,8 +371,8 @@ Expression parse_expression(Reader<Token> &reader) {
 
 
 void print_expression(const Expression &expr, String_Table &string_table, Unsigned indent = 0) {
-    auto do_indent = [&]() {
-        for(Usize i = 0; i < indent; i += 1) {
+    auto do_indent = [&](int offset = 0) {
+        for(Usize i = 0; i < indent + offset; i += 1) {
             printf("    ");
         }
     };
@@ -319,36 +384,47 @@ void print_expression(const Expression &expr, String_Table &string_table, Unsign
         (int)type.size, type.values
     );
 
-    indent += 1;
+    auto print_simple_arg = [&](Argument_Type type, Interned_String value) {
+        printf("type: ");
+        switch(type) {
+            case ARG_ATOM: { printf("atom"); } break;
+            case ARG_STRING: { printf("string"); } break;
+            case ARG_NUMBER: { printf("number"); } break;
+            case ARG_BLOCK: case ARG_LIST: default: assert(false);
+        }
 
+        auto string = string_table[value];
+        printf(", value: %.*s\n", (int)string.size, string.values);
+    };
+
+    // NOTE(llw): Print arguments.
     auto &arguments = expr.arguments;
     for(Usize i = 0; i < arguments.count; i += 1) {
-        do_indent();
+        do_indent(1);
 
         auto arg_name = arguments.entries[i].key;
         auto arg      = arguments.entries[i].value;
 
         auto name = string_table[arg_name];
-        printf("name: %.*s, type: ", (int)name.size, name.values);
+        printf("name: %.*s, ", (int)name.size, name.values);
 
-        if(arg.type == ARG_LIST) {
-            printf("list\n");
+        if(arg.type == ARG_BLOCK) {
+            printf("type: block\n");
 
-            auto &expressions = arg.expressions;
-            for(Usize i = 0; i < expressions.count; i += 1) {
-                print_expression(expressions[i], string_table, indent + 1);
+            for(Usize i = 0; i < arg.block.count; i += 1) {
+                print_expression(arg.block[i], string_table, indent + 2);
+            }
+        }
+        else if(arg.type == ARG_LIST) {
+            printf("type: list\n");
+
+            for(Usize i = 0; i < arg.list.count; i += 1) {
+                do_indent(2);
+                print_simple_arg(arg.list[i].type, arg.list[i].value);
             }
         }
         else {
-            switch(arg.type) {
-                case ARG_ATOM: { printf("atom"); } break;
-                case ARG_STRING: { printf("string"); } break;
-                case ARG_NUMBER: { printf("number"); } break;
-                case ARG_LIST: assert(false);
-            }
-
-            auto value = string_table[arg.value];
-            printf(", value: %.*s\n", (int)value.size, value.values);
+            print_simple_arg(arg.type, arg.value);
         }
     }
 }
@@ -362,8 +438,13 @@ bool parse(const Array<U8> &buffer) {
     #if 0
     for(Usize i = 0 ; i < tokens.count; i += 1) {
         auto t = tokens[i];
-        auto s = context.string_table[t.string];
-        printf("%d %.*s\n", t.type, (int)s.size, s.values);
+        if(t.string != 0) {
+            auto s = context.string_table[t.string];
+            printf("%d %.*s\n", t.type, (int)s.size, s.values);
+        }
+        else {
+            printf("0 \\n\n");
+        }
     }
     #endif
 
@@ -371,7 +452,11 @@ bool parse(const Array<U8> &buffer) {
         tokens.values,
         tokens.values + tokens.count
     };
-    while(token_reader.current < token_reader.end) {
+    while(true) {
+
+        if(skip_eol(token_reader) < 1) {
+            break;
+        }
 
         auto expr = parse_expression(token_reader);
         if(!is_valid(expr)) {
