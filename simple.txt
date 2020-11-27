@@ -24,6 +24,10 @@
     name: "template",
     inherits: "root",
     parameters: [ content ],
+    title: "template",
+    icon: "base_icon.ico",
+    style_sheets: [ "main.css" ],
+    scripts: [ "main.js" ],
     content: {
         text type: "h1", value: "header"
         content
@@ -35,6 +39,9 @@
 (page
     name: "reservierung",
     inherits: "template",
+    title: "Reservierung",
+    style_sheets: [ "register.css" ],
+    scripts: [ "register.js" ],
     content: {
         text id: "foo", type: "h1", value: "Title"
         spacer desktop: 4, mobile: 3

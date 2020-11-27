@@ -27,7 +27,7 @@ extern struct Context {
             text, spacer,
             h1, p, span,
             parameters, inherits,
-            style_sheets, scripts;
+            title, icon, style_sheets, scripts;
     } strings;
 
     Map<Interned_String, int> valid_text_types;
@@ -43,4 +43,8 @@ extern struct Context {
 } context;
 
 void setup_context();
+
+_inline void push(Array<U8> &array, Interned_String id) {
+    push(array, context.string_table[id]);
+}
 

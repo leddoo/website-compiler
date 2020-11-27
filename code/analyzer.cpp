@@ -132,6 +132,8 @@ static bool validate(const Expression &expr) {
     if(expr.type == context.strings.page) {
         use_arg(context.strings.name);
         use_arg(context.strings.body);
+        use_arg(context.strings.title);
+        use_arg(context.strings.icon);
         use_arg(context.strings.style_sheets);
         use_arg(context.strings.scripts);
 
@@ -234,7 +236,24 @@ static bool validate(const Expression &expr) {
             }
         }
 
-        // NOTE(llw): Check style sheets and scripts.
+        // NOTE(llw): Check title, icon, style sheets, scripts.
+
+        auto title = get_pointer(args, context.strings.title);
+        if(title != NULL) {
+            if(title->type != ARG_STRING) {
+                printf("Error: 'title' must be a string.\n");
+                return false;
+            }
+        }
+
+        auto icon = get_pointer(args, context.strings.icon);
+        if(icon != NULL) {
+            if(icon->type != ARG_STRING) {
+                printf("Error: 'icon' must be a string.\n");
+                return false;
+            }
+        }
+
         auto style_sheets = get_pointer(args, context.strings.style_sheets);
         if(style_sheets != NULL) {
             if(!is_list_of(*style_sheets, ARG_STRING, NULL)) {
@@ -243,7 +262,7 @@ static bool validate(const Expression &expr) {
             }
         }
 
-        auto scripts = get_pointer(args, context.strings.style_sheets);
+        auto scripts = get_pointer(args, context.strings.scripts);
         if(scripts != NULL) {
             if(!is_list_of(*scripts, ARG_STRING, NULL)) {
                 printf("Error: 'scripts' must be a list of strings.\n");
@@ -407,6 +426,37 @@ static bool insert_parameters(
 }
 
 
+static void page_build_result(const Expression &self, Expression &result) {
+    const auto &own_args = self.arguments;
+    auto &res_args = result.arguments;
+
+    auto body = get_pointer(own_args, context.strings.body);
+    if(body) {
+        res_args[context.strings.body] = duplicate(*body, context.arena);
+    }
+
+    auto title = get_pointer(own_args, context.strings.title);
+    if(title) {
+        insert_or_set(res_args, context.strings.title, *title);
+    }
+
+    auto icon = get_pointer(own_args, context.strings.icon);
+    if(icon) {
+        insert_or_set(res_args, context.strings.icon, *icon);
+    }
+
+    auto style_sheets = get_pointer(own_args, context.strings.style_sheets);
+    if(style_sheets) {
+        push(res_args[context.strings.style_sheets].list, style_sheets->list);
+    }
+
+    auto scripts = get_pointer(own_args, context.strings.scripts);
+    if(scripts) {
+        push(res_args[context.strings.scripts].list, scripts->list);
+    }
+
+}
+
 static bool instantiate_page(
     const Expression &derived,
     Expression &self, // modified
@@ -447,24 +497,7 @@ static bool instantiate_page(
     }
 
 
-    // NOTE(llw): Build result.
-    auto &res_args = result.arguments;
-
-    auto body = get_pointer(own_args, context.strings.body);
-    if(body) {
-        res_args[context.strings.body] = duplicate(*body, context.arena);
-    }
-
-    auto style_sheets = get_pointer(own_args, context.strings.style_sheets);
-    if(style_sheets) {
-        push(res_args[context.strings.style_sheets].list, style_sheets->list);
-    }
-
-    auto scripts = get_pointer(own_args, context.strings.scripts);
-    if(scripts) {
-        push(res_args[context.strings.scripts].list, scripts->list);
-    }
-
+    page_build_result(self, result);
 
     return true;
 }
@@ -502,6 +535,7 @@ static bool instantiate_page(
     super = duplicate(super, context.temporary);
 
     auto success = instantiate_page(page, super, result);
+    page_build_result(page, result);
     return success;
 }
 

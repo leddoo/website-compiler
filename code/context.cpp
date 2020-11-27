@@ -46,6 +46,8 @@ void setup_context() {
     strings.parameters = intern(table, STRING("parameters"));
     strings.inherits   = intern(table, STRING("inherits"));
 
+    strings.title        = intern(table, STRING("title"));
+    strings.icon         = intern(table, STRING("icon"));
     strings.style_sheets = intern(table, STRING("style_sheets"));
     strings.scripts      = intern(table, STRING("scripts"));
 

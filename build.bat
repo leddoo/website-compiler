@@ -44,7 +44,8 @@ set sources=^
     ..\code\util.cpp^
     ..\code\parser.cpp^
     ..\code\context.cpp^
-    ..\code\analyzer.cpp
+    ..\code\analyzer.cpp^
+    ..\code\codegen.cpp
 
 set all_sources=%sources% %libcpp_sources%
 
