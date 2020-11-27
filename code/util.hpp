@@ -65,6 +65,7 @@ _inline Reader<U8> make_reader(String string) {
 using Interned_String = U32;
 
 struct String_Table {
+    Allocator *allocator;
     Map<String, Interned_String> table;
     Map<Interned_String, String> reverse;
     Interned_String previous_id;

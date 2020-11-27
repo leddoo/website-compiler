@@ -388,10 +388,7 @@ void print(const Expression &expr, Unsigned indent) {
 
     do_indent();
 
-    auto type = string_table[expr.type];
-    printf("Expression type: %.*s\n",
-        (int)type.size, type.values
-    );
+    printf("Expression type: %s\n", string_table[expr.type].values);
 
     auto print_simple_arg = [&](Argument_Type type, Interned_String value) {
         printf("type: ");
@@ -402,8 +399,7 @@ void print(const Expression &expr, Unsigned indent) {
             case ARG_BLOCK: case ARG_LIST: default: assert(false);
         }
 
-        auto string = string_table[value];
-        printf(", value: %.*s\n", (int)string.size, string.values);
+        printf(", value: %s\n", string_table[value].values);
     };
 
     // NOTE(llw): Print arguments.
@@ -414,8 +410,7 @@ void print(const Expression &expr, Unsigned indent) {
         auto arg_name = arguments.entries[i].key;
         auto arg      = arguments.entries[i].value;
 
-        auto name = string_table[arg_name];
-        printf("name: %.*s, ", (int)name.size, name.values);
+        printf("name: %s, ", string_table[arg_name].values);
 
         if(arg.type == ARG_BLOCK) {
             printf("type: block\n");
@@ -444,19 +439,6 @@ bool parse(const Array<U8> &buffer) {
         return false;
     }
 
-    #if 0
-    for(Usize i = 0 ; i < tokens.count; i += 1) {
-        auto t = tokens[i];
-        if(t.string != 0) {
-            auto s = context.string_table[t.string];
-            printf("%d %.*s\n", t.type, (int)s.size, s.values);
-        }
-        else {
-            printf("0 \\n\n");
-        }
-    }
-    #endif
-
     auto token_reader = Reader<Token> {
         tokens.values,
         tokens.values + tokens.count
@@ -471,10 +453,6 @@ bool parse(const Array<U8> &buffer) {
         if(!is_valid(expr)) {
             return false;
         }
-
-        #if 0
-        print(expr);
-        #endif
 
         push(context.expressions, expr);
     }

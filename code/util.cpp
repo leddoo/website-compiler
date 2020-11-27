@@ -125,6 +125,7 @@ void skip_whitespace(
 
 String_Table create_string_table(libcpp::Allocator &allocator) {
     auto result = String_Table {};
+    result.allocator = &allocator;
     result.table.allocator = &allocator;
     result.reverse.allocator = &allocator;
     return result;
@@ -136,6 +137,13 @@ Interned_String intern(String_Table &table, String string) {
     if(pointer == NULL) {
         table.previous_id += 1;
         auto id = table.previous_id;
+
+        auto s = allocate_array_uninitialized<U8>(string.size + 1, *table.allocator);
+        copy_bytes(s, string.values, string.size);
+        s[string.size] = 0;
+
+        string.values = s;
+
         insert(table.table, string, id);
         insert(table.reverse, id, string);
         return id;

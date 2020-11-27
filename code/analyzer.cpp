@@ -294,9 +294,7 @@ static bool validate(const Expression &expr) {
     }
     else {
         auto type = context.string_table[expr.type];
-        printf("Unrecognized expression type: '%.*s'\n",
-            (int)type.size, type.values
-        );
+        printf("Unrecognized expression type: '%s'\n", type.values);
 
         return false;
     }
@@ -306,9 +304,7 @@ static bool validate(const Expression &expr) {
 
         if(!has(used_args, name)) {
             auto string = context.string_table[name];
-            printf("Warning: Unused argument '%.*s'\n",
-                (int)string.size, string.values
-            );
+            printf("Warning: Unused argument '%s'\n", string.values);
         }
     }
 
