@@ -1,7 +1,45 @@
-(def_page name: "reservierung", body: {
-    text id: "foo", type: "h1", value: "Title"
-    spacer desktop: 4, mobile: 3
-    text global_id: "bar", type: "p", value: "Have a paragraph!"
-    spacer value: 1
-})
+(page
+    name: "empty",
+    body: { foo },
+    parameters: [ foo ],
+)
+
+(page
+    name: "error",
+    inherits: "empty",
+    foo: { text type: "span", value: "foo" },
+)
+
+(page
+    name: "root",
+    parameters: [ content, foo ],
+    body: {
+        content
+        text type: "h1", value: "finally"
+        text type: "span", value: foo
+    },
+)
+
+(page
+    name: "template",
+    inherits: "root",
+    parameters: [ content ],
+    content: {
+        text type: "h1", value: "header"
+        content
+        text type: "h1", value: "footer"
+    },
+    foo: "foo",
+)
+
+(page
+    name: "reservierung",
+    inherits: "template",
+    content: {
+        text id: "foo", type: "h1", value: "Title"
+        spacer desktop: 4, mobile: 3
+        text global_id: "bar", type: "p", value: "Have a paragraph!"
+        spacer value: 1
+    },
+)
 

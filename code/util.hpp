@@ -69,7 +69,7 @@ struct String_Table {
     Map<Interned_String, String> reverse;
     Interned_String previous_id;
 
-    String operator[](Interned_String key) {
+    String operator[](Interned_String key) const {
         return reverse[key];
     }
 };

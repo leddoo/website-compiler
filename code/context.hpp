@@ -2,6 +2,8 @@
 
 #include "util.hpp"
 #include "parser.hpp"
+#include "analyzer.hpp"
+
 #include <libcpp/memory/arena.hpp>
 using namespace libcpp;
 
@@ -21,10 +23,11 @@ extern struct Context {
             name, body,
             type, value,
             desktop, mobile,
-            def_page,
+            page,
             text, spacer,
-            spacer_same, spacer_desktop_mobile,
-            h1, p, span;
+            h1, p, span,
+            parameters, inherits,
+            style_sheets, scripts;
     } strings;
 
     Map<Interned_String, int> valid_text_types;
@@ -33,6 +36,9 @@ extern struct Context {
     // Parser
     U32 next_expression_id;
     Array<Expression> expressions;
+
+    // Analyzer
+    Map<Interned_String, Symbol> symbols;
 
 } context;
 

@@ -141,6 +141,114 @@ bool is_valid(const Expression &e) {
     return e.type != 0;
 }
 
+Expression parse_expression(Reader<Token> &reader);
+
+bool parse_argument(
+    Reader<Token> &reader,
+    Argument &result,
+    U32 parent_expression
+) {
+    if(reader.current >= reader.end) {
+        printf("Unexpected end of file.\n");
+        return false;
+    }
+
+    // NOTE(llw): Consume current.
+    auto at = *reader.current;
+    reader.current += 1;
+
+    if(at.type == TOKEN_ATOM) {
+        result.type = ARG_ATOM;
+        result.value = at.string;
+        return true;
+    }
+    else if(at.type == TOKEN_STRING) {
+        result.type = ARG_STRING;
+        result.value = at.string;
+        return true;
+    }
+    else if(at.type == TOKEN_NUMBER) {
+        result.type = ARG_NUMBER;
+        result.value = at.string;
+        return true;
+    }
+    else if(at.string == context.strings.curly_open) {
+        result.type = ARG_BLOCK;
+        result.block = create_array<Expression>(context.arena);
+
+        while(true) {
+
+            if(skip_eol(reader) < 1) {
+                printf("Unexpected end of file.\n");
+                return false;
+            }
+
+            if(reader.current->string == context.strings.curly_close) {
+                reader.current += 1;
+                break;
+            }
+
+            auto expr = parse_expression(reader);
+            if(!is_valid(expr)) {
+                return false;
+            }
+
+            expr.parent = parent_expression;
+
+            push(result.block, expr);
+        }
+
+        return true;
+    }
+    else if(at.string == context.strings.square_open) {
+        result.type = ARG_LIST;
+        result.list = create_array<Argument>(context.arena);
+
+        auto was_last = false;
+        while(true) {
+
+            if(skip_eol(reader) < 2) {
+                printf("Unexpected eof.\n");
+                return false;
+            }
+
+            auto t0 = reader.current[0];
+            auto t1 = reader.current[1];
+
+            if(t0.string == context.strings.square_close) {
+                reader.current += 1;
+                break;
+            }
+
+            if(was_last) {
+                printf("Comma missing after list item.\n");
+                return false;
+            }
+
+            auto value = Argument {};
+            if(!parse_argument(reader, value, parent_expression)) {
+                return false;
+            }
+
+            push(result.list, value);
+
+            if(t1.string == context.strings.comma) {
+                reader.current += 1;
+            }
+            else {
+                was_last = true;
+            }
+        }
+
+        return true;
+    }
+    else {
+        printf("Invalid argument value.\n");
+        return false;
+    }
+
+}
+
 Expression parse_expression(Reader<Token> &reader) {
     if(skip_eol(reader) < 1) {
         printf("Unexpected end of file.\n");
@@ -199,6 +307,7 @@ Expression parse_expression(Reader<Token> &reader) {
         }
         else {
             done |= at.type == TOKEN_EOL;
+            done |= at.string == context.strings.curly_close;
         }
 
         if(done) {
@@ -220,11 +329,9 @@ Expression parse_expression(Reader<Token> &reader) {
             return {};
         }
 
-        // NOTE(llw): Consume all 3 tokens.
         auto t0 = reader.current[0];
         auto t1 = reader.current[1];
         auto t2 = reader.current[2];
-        reader.current += 3;
 
         if(t0.type != TOKEN_ATOM) {
             printf("Argument must begin with name.\n");
@@ -236,112 +343,12 @@ Expression parse_expression(Reader<Token> &reader) {
             return {};
         }
 
+        // NOTE(llw): Consume name and colon.
+        reader.current += 2;
+
         auto arg_name = t0.string;
         auto arg = Argument {};
-        arg.value = t2.string;
-
-        if(t2.type == TOKEN_ATOM) {
-            arg.type = ARG_ATOM;
-        }
-        else if(t2.type == TOKEN_STRING) {
-            arg.type = ARG_STRING;
-        }
-        else if(t2.type == TOKEN_NUMBER) {
-            arg.type = ARG_NUMBER;
-        }
-        else if(t2.string == context.strings.curly_open) {
-            arg.type = ARG_BLOCK;
-            arg.block = create_array<Expression>(context.arena);
-
-            auto success = false;
-            while(true) {
-
-                if(skip_eol(reader) < 1) {
-                    reached_eof = true;
-                    break;
-                }
-
-                if(reader.current->string == context.strings.curly_close) {
-                    reader.current += 1;
-                    success = true;
-                    break;
-                }
-
-                auto expr = parse_expression(reader);
-                if(!is_valid(expr)) {
-                    break;
-                }
-
-                expr.parent = own_id;
-
-                push(arg.block, expr);
-            }
-
-            if(!success) {
-                break;
-            }
-
-        }
-        else if(t2.string == context.strings.square_open) {
-            arg.type = ARG_LIST;
-            arg.list = create_array<Simple_Argument>(context.arena);
-
-            auto success = false;
-            auto was_last = false;
-            while(true) {
-
-                if(skip_eol(reader) < 2) {
-                    reached_eof = true;
-                    break;
-                }
-
-                auto t0 = reader.current[0];
-                auto t1 = reader.current[1];
-
-                if(t0.string == context.strings.square_close) {
-                    reader.current += 1;
-                    success = true;
-                    break;
-                }
-
-                if(was_last) {
-                    printf("Comma missing after list item.\n");
-                    break;
-                }
-
-                auto value = Simple_Argument {};
-                value.value = t0.string;
-
-                if(t0.type == TOKEN_ATOM) {
-                    value.type = ARG_ATOM;
-                }
-                else if(t0.type == TOKEN_STRING) {
-                    value.type = ARG_STRING;
-                }
-                else if(t0.type == TOKEN_NUMBER) {
-                    value.type = ARG_NUMBER;
-                }
-                else {
-                    printf("Invalid list item.\n");
-                    break;
-                }
-
-                // NOTE(llw): Consume value.
-                reader.current += 1;
-
-                push(arg.list, value);
-
-                if(t1.string == context.strings.comma) {
-                    reader.current += 1;
-                }
-                else {
-                    was_last = true;
-                }
-
-            }
-        }
-        else {
-            printf("Invalid argument value.\n");
+        if(!parse_argument(reader, arg, own_id)) {
             return {};
         }
 
@@ -370,7 +377,9 @@ Expression parse_expression(Reader<Token> &reader) {
 }
 
 
-void print_expression(const Expression &expr, String_Table &string_table, Unsigned indent = 0) {
+void print(const Expression &expr, Unsigned indent) {
+    auto &string_table = context.string_table;
+
     auto do_indent = [&](int offset = 0) {
         for(Usize i = 0; i < indent + offset; i += 1) {
             printf("    ");
@@ -412,7 +421,7 @@ void print_expression(const Expression &expr, String_Table &string_table, Unsign
             printf("type: block\n");
 
             for(Usize i = 0; i < arg.block.count; i += 1) {
-                print_expression(arg.block[i], string_table, indent + 2);
+                print(arg.block[i], indent + 2);
             }
         }
         else if(arg.type == ARG_LIST) {
@@ -464,12 +473,76 @@ bool parse(const Array<U8> &buffer) {
         }
 
         #if 0
-        print_expression(expr, context.string_table);
+        print(expr);
         #endif
 
         push(context.expressions, expr);
     }
 
     return true;
+}
+
+
+Argument create_argument(Argument_Type type, Allocator &allocator) {
+    auto result = Argument {};
+    result.type = type;
+
+    switch(result.type) {
+        case ARG_ATOM:
+        case ARG_STRING:
+        case ARG_NUMBER: {} break;
+
+        case ARG_BLOCK: {
+            result.block = { &allocator };
+        } break;
+
+        case ARG_LIST: {
+            result.list = { &allocator };
+        } break;
+    }
+
+    return result;
+}
+
+Argument duplicate(const Argument &argument, Allocator &allocator) {
+    auto result = Argument {};
+    result.type = argument.type;
+
+    switch(argument.type) {
+        case ARG_ATOM:
+        case ARG_STRING:
+        case ARG_NUMBER: {
+            result.value = argument.value;
+        } break;
+
+        case ARG_BLOCK: {
+            result.block = duplicate(argument.block, allocator);
+            for(Usize i = 0; i < result.block.count; i += 1) {
+                result.block[i] = duplicate(result.block[i], allocator);
+            }
+        } break;
+
+        case ARG_LIST: {
+            result.list = duplicate(argument.list, allocator);
+            for(Usize i = 0; i < result.list.count; i += 1) {
+                result.list[i] = duplicate(result.list[i], allocator);
+            }
+        } break;
+    }
+
+    return result;
+}
+
+Expression duplicate(const Expression &expression, Allocator &allocator) {
+    auto result = Expression {};
+    result = expression;
+    result.arguments = duplicate(expression.arguments, allocator);
+
+    for(Usize i = 0; i < result.arguments.count; i += 1) {
+        auto &v = result.arguments.entries[i].value;
+        v = duplicate(v, allocator);
+    }
+
+    return result;
 }
 

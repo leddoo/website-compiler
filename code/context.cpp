@@ -7,6 +7,7 @@ void setup_context() {
     context.temporary    = create_arena();
     context.string_table = create_string_table(context.arena);
     context.expressions  = { &context.arena };
+    context.symbols      = create_map<Interned_String, Symbol>(context.arena);
 
     context.strings.dot    = intern(context.string_table, STRING("."));
     context.strings.comma  = intern(context.string_table, STRING(","));
@@ -33,17 +34,20 @@ void setup_context() {
     strings.desktop = intern(table, STRING("desktop"));
     strings.mobile  = intern(table, STRING("mobile"));
 
-    strings.def_page = intern(table, STRING("def_page"));
+    strings.page = intern(table, STRING("page"));
 
     strings.text   = intern(table, STRING("text"));
     strings.spacer = intern(table, STRING("spacer"));
 
-    strings.spacer_same           = intern(table, STRING("spacer_same"));
-    strings.spacer_desktop_mobile = intern(table, STRING("spacer_desktop_mobile"));
-
     strings.h1   = intern(table, STRING("h1"));
     strings.p    = intern(table, STRING("p"));
     strings.span = intern(table, STRING("span"));
+
+    strings.parameters = intern(table, STRING("parameters"));
+    strings.inherits   = intern(table, STRING("inherits"));
+
+    strings.style_sheets = intern(table, STRING("style_sheets"));
+    strings.scripts      = intern(table, STRING("scripts"));
 
 
     TEMP_SCOPE(context.temporary);
