@@ -23,11 +23,10 @@ extern struct Context {
             name, body,
             type, value,
             desktop, mobile,
-            page,
-            text, spacer,
+            page, title, icon, style_sheets, scripts,
+            text, spacer, div,
             h1, p, span,
-            parameters, inherits,
-            title, icon, style_sheets, scripts;
+            parameters, inherits;
     } strings;
 
     Map<Interned_String, int> valid_text_types;

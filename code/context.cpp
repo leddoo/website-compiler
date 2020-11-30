@@ -35,9 +35,14 @@ void setup_context() {
     strings.mobile  = intern(table, STRING("mobile"));
 
     strings.page = intern(table, STRING("page"));
+    strings.title        = intern(table, STRING("title"));
+    strings.icon         = intern(table, STRING("icon"));
+    strings.style_sheets = intern(table, STRING("style_sheets"));
+    strings.scripts      = intern(table, STRING("scripts"));
 
     strings.text   = intern(table, STRING("text"));
     strings.spacer = intern(table, STRING("spacer"));
+    strings.div    = intern(table, STRING("div"));
 
     strings.h1   = intern(table, STRING("h1"));
     strings.p    = intern(table, STRING("p"));
@@ -45,11 +50,6 @@ void setup_context() {
 
     strings.parameters = intern(table, STRING("parameters"));
     strings.inherits   = intern(table, STRING("inherits"));
-
-    strings.title        = intern(table, STRING("title"));
-    strings.icon         = intern(table, STRING("icon"));
-    strings.style_sheets = intern(table, STRING("style_sheets"));
-    strings.scripts      = intern(table, STRING("scripts"));
 
 
     TEMP_SCOPE(context.temporary);

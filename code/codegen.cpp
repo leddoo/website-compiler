@@ -173,12 +173,26 @@ static void generate_html(
 
         push(buffer, page_html_3);
     }
+    else if(expr.type == context.strings.div) {
+        push(buffer, STRING("<div"));
+        push(buffer, id_string);
+        push(buffer, STRING(">\n"));
+
+        const auto &children = args[context.strings.body].block;
+        for(Usize i = 0; i < children.count; i += 1) {
+            generate_html(buffer, children[i], id, indent + 1);
+        }
+
+        do_indent();
+        push(buffer, STRING("</div>\n"));
+    }
     else if(expr.type == context.strings.text) {
         auto type  = args[context.strings.type].value;
         auto value = args[context.strings.value].value;
 
         push(buffer, STRING("<"));
         push(buffer, type);
+        push(buffer, id_string);
         push(buffer, STRING(">\n"));
 
         do_indent(1);

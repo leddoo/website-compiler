@@ -271,6 +271,15 @@ static bool validate(const Expression &expr) {
         }
 
     }
+    else if(expr.type == context.strings.div) {
+        use_arg(context.strings.body);
+
+        auto body = get_pointer(args, context.strings.body);
+        if(!is_block(body)) {
+            printf("Error: Divs must have a 'body' argument of type block.\n");
+            return false;
+        }
+    }
     else if(expr.type == context.strings.text) {
         auto type  = get_pointer(args, context.strings.type);
         auto value = get_pointer(args, context.strings.value);

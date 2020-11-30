@@ -45,7 +45,10 @@
     content: {
         text id: "foo", type: "h1", value: "Title"
         spacer desktop: 4, mobile: 3
-        text global_id: "bar", type: "p", value: "Have a paragraph!"
+        div id: "yeet", body: {
+            text global_id: "bar", type: "p", value: "Have a paragraph!"
+            text type: "p", value: "And another one."
+        }
         spacer value: 1
     },
 )
