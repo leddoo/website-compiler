@@ -1,4 +1,4 @@
 #pragma once
 
-bool codegen();
+void codegen();
 

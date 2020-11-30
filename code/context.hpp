@@ -49,3 +49,7 @@ _inline void push(Array<U8> &array, Interned_String id) {
     push(array, context.string_table[id]);
 }
 
+
+Interned_String make_full_id_from_lid(Interned_String prefix, Interned_String lid);
+Interned_String make_full_id_from_gid(Interned_String gid);
+

@@ -22,7 +22,7 @@ static void generate_html(
 );
 
 
-bool codegen() {
+void codegen() {
 
     // NOTE(llw): Generate html for pages.
     for(Usize i = 0; i < context.pages.count; i += 1) {
@@ -34,8 +34,6 @@ bool codegen() {
 
         write_file(name, STRING(".html"), buffer);
     }
-
-    return true;
 }
 
 
@@ -78,30 +76,23 @@ static void generate_html(
 
     const auto &args = expr.arguments;
 
-    auto id = Interned_String {};
+    auto full_id = Interned_String {};
     {
         auto lid = get_pointer(args, context.strings.id);
         auto gid = get_pointer(args, context.strings.global_id);
 
-        if(parent != 0 && lid != NULL) {
-            TEMP_SCOPE(context.temporary);
-
-            auto cat = create_array<U8>(context.temporary);
-            push(cat, parent);
-            push(cat, (U8)'.');
-            push(cat, lid->value);
-
-            id = intern(context.string_table, str(cat));
+        if(lid != NULL) {
+            full_id = make_full_id_from_lid(parent, lid->value);
         }
         else if(gid != NULL) {
-            id = gid->value;
+            full_id = make_full_id_from_gid(gid->value);
         }
     }
 
     auto id_string = create_array<U8>(context.temporary);
-    if(id != 0) {
+    if(full_id != 0) {
         push(id_string, STRING(" id = \""));
-        push(id_string, id);
+        push(id_string, full_id);
         push(id_string, STRING("\""));
     }
 
@@ -109,11 +100,9 @@ static void generate_html(
     do_indent();
 
     if(expr.type == context.strings.page) {
-        auto id = args[context.strings.name].value;
-
-        indent += 1;
 
         push(buffer, page_html_1);
+        indent += 1;
 
         auto title = get_pointer(args, context.strings.title);
         if(title != NULL) {
@@ -156,13 +145,11 @@ static void generate_html(
         push(buffer, page_html_2);
 
         do_indent();
-        push(buffer, STRING("<div"));
-        push(buffer, id_string);
-        push(buffer, STRING(">\n"));
+        push(buffer, STRING("<div id = \"page\">\n"));
 
         const auto &children = args[context.strings.body].block;
         for(Usize i = 0; i < children.count; i += 1) {
-            generate_html(buffer, children[i], id, indent + 1);
+            generate_html(buffer, children[i], context.strings.page, indent + 1);
         }
 
         do_indent();
@@ -175,9 +162,12 @@ static void generate_html(
         push(buffer, id_string);
         push(buffer, STRING(">\n"));
 
-        const auto &children = args[context.strings.body].block;
-        for(Usize i = 0; i < children.count; i += 1) {
-            generate_html(buffer, children[i], id, indent + 1);
+        auto body = get_pointer(args, context.strings.body);
+        if(body != NULL) {
+            const auto &children = body->block;
+            for(Usize i = 0; i < children.count; i += 1) {
+                generate_html(buffer, children[i], full_id, indent + 1);
+            }
         }
 
         do_indent();

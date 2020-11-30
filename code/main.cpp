@@ -44,9 +44,7 @@ int main(int argument_count, const char **arguments) {
         exit(1);
     }
 
-    if(!codegen()) {
-        exit(1);
-    }
+    codegen();
 
     printf("Done.\n");
 }

@@ -3,8 +3,13 @@
 
 #include "stdio.h"
 
+struct Validate_Context {
+    Map<Interned_String, int> *id_table;
+    Interned_String id_prefix;
+};
+
 static bool validate(Symbol &symbol);
-static bool validate(const Expression &expr);
+static bool validate(const Expression &expr, Validate_Context vc);
 static bool instantiate_page(const Expression &page, Expression &result);
 
 
@@ -62,7 +67,10 @@ bool analyze() {
             if(!instantiate_page(*symbol.expression, *expr)) {
                 return false;
             }
-            if(!validate(*expr)) {
+
+            auto symbol = Symbol {};
+            symbol.expression = expr;
+            if(!validate(symbol)) {
                 return false;
             }
 
@@ -111,7 +119,13 @@ static bool is_generic_page(const Expression &expr) {
         && has(expr.arguments, context.strings.parameters);
 }
 
-static bool validate(const Expression &expr) {
+static bool is_concrete_page(const Expression &expr) {
+    return expr.type == context.strings.page
+        && !has(expr.arguments, context.strings.parameters)
+        && !has(expr.arguments, context.strings.inherits);
+}
+
+static bool validate(const Expression &expr, Validate_Context vc) {
 
     TEMP_SCOPE(context.temporary);
 
@@ -122,16 +136,40 @@ static bool validate(const Expression &expr) {
         insert_maybe(used_args, arg, 0);
     };
 
-    // NOTE(llw): Check id arguments.
-    auto has_lid = has(args, context.strings.id);
-    auto has_gid = has(args, context.strings.global_id);
-    auto has_id = has_lid | has_gid;
-    if(has_lid && has_gid) {
+    // NOTE(llw): Check id existence.
+    use_arg(context.strings.id);
+    use_arg(context.strings.global_id);
+    auto lid = get_pointer(args, context.strings.id);
+    auto gid = get_pointer(args, context.strings.global_id);
+    auto has_id = lid != NULL || gid != NULL;
+    if(lid != NULL && gid != NULL) {
         printf("Cannot have both local and global id.\n");
         return false;
     }
-    use_arg(context.strings.id);
-    use_arg(context.strings.global_id);
+
+    // NOTE(llw): Check id type.
+    if(    lid != NULL && lid->type != ARG_STRING
+        || gid != NULL && gid->type != ARG_STRING
+    ) {
+        printf("Ids must be strings.\n");
+        return false;
+    }
+
+    // NOTE(llw): Check id uniqueness.
+    auto full_id = Interned_String {};
+    if(vc.id_table != NULL && has_id) {
+        if(lid != NULL) {
+            full_id = make_full_id_from_lid(vc.id_prefix, lid->value);
+        }
+        else {
+            full_id = make_full_id_from_gid(gid->value);
+        }
+
+        if(!insert_maybe(*vc.id_table, full_id, 0)) {
+            printf("Error: Duplicate id.\n");
+            return false;
+        }
+    }
 
 
     if(expr.type == context.strings.page) {
@@ -147,11 +185,16 @@ static bool validate(const Expression &expr) {
             return false;
         }
 
+        if(has_id) {
+            printf("Error: Pages cannot have an id.\n");
+            return false;
+        }
+
         auto parameters = get_pointer(args, context.strings.parameters);
         auto inherits   = get_pointer(args, context.strings.inherits);
 
-        auto is_generic = parameters != NULL;
-        auto is_final   = !is_generic && !inherits;
+        auto is_generic  = parameters != NULL;
+        auto is_concrete = !is_generic && !inherits;
 
 
         // TODO(llw): Warn about duplicates, extract into procedure that prints
@@ -221,7 +264,7 @@ static bool validate(const Expression &expr) {
         }
 
         // NOTE(llw): Check body.
-        if(is_final) {
+        if(is_concrete) {
             auto body = get_pointer(args, context.strings.body);
             if(body == NULL) {
                 printf("Non-inheriting pages require a body.\n");
@@ -235,7 +278,7 @@ static bool validate(const Expression &expr) {
 
             const auto &children = body->block;
             for(Usize i = 0; i < children.count; i += 1) {
-                if(!validate(children[i])) {
+                if(!validate(children[i], vc)) {
                     return false;
                 }
             }
@@ -280,9 +323,25 @@ static bool validate(const Expression &expr) {
         use_arg(context.strings.body);
 
         auto body = get_pointer(args, context.strings.body);
-        if(!is_block(body)) {
-            printf("Error: Divs must have a 'body' argument of type block.\n");
-            return false;
+        if(body != NULL) {
+            if(!is_block(body)) {
+                printf("Error: A div's 'body' argument must be a block.\n");
+                return false;
+            }
+
+            if(full_id) {
+                vc.id_prefix = full_id;
+            }
+
+            const auto &block = body->block;
+            for(Usize i = 0; i < block.count; i += 1) {
+                if(!validate(block[i], vc)) {
+                    return false;
+                }
+            }
+        }
+        else if(full_id == 0) {
+            printf("Warning: Empty div.\n");
         }
     }
     else if(expr.type == context.strings.text) {
@@ -353,8 +412,16 @@ static bool validate(Symbol &symbol) {
         return false;
     }
 
+    auto vc = Validate_Context {};
+
+    auto id_table = create_map<Interned_String, int>(context.arena);
+    if(is_concrete_page(*symbol.expression)) {
+        vc.id_table = &id_table;
+        vc.id_prefix = context.strings.page;
+    }
+
     symbol.state = SYMS_PROCESSING;
-    auto success = validate(*symbol.expression);
+    auto success = validate(*symbol.expression, vc);
     symbol.state = SYMS_DONE;
 
     return success;

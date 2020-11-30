@@ -76,3 +76,21 @@ void setup_context() {
     insert(context.valid_text_types, strings.span, 0);
 }
 
+
+Interned_String make_full_id_from_lid(Interned_String prefix, Interned_String lid) {
+    TEMP_SCOPE(context.temporary);
+    auto buffer = create_array<U8>(context.temporary);
+    push(buffer, prefix);
+    push(buffer, (U8)'.');
+    push(buffer, lid);
+    return intern(context.string_table, str(buffer));
+}
+
+Interned_String make_full_id_from_gid(Interned_String gid) {
+    TEMP_SCOPE(context.temporary);
+    auto buffer = create_array<U8>(context.temporary);
+    push(buffer, STRING("page."));
+    push(buffer, gid);
+    return intern(context.string_table, str(buffer));
+}
+
