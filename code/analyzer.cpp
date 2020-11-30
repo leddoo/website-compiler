@@ -15,14 +15,12 @@ bool analyze() {
         auto &expr = context.expressions[i];
 
         auto symbol = Symbol {};
+        symbol.expression = &expr;
+
+        auto type = Symbol_Type {};
 
         if(expr.type == context.strings.page) {
-            symbol.type = SYM_PAGE;
-            symbol.expression = &expr;
-
-            if(has(expr.arguments, context.strings.parameters)) {
-                symbol.type = SYM_GENERIC_PAGE;
-            }
+            type = SYMBOL_PAGE;
         }
         else {
             printf("Not a definition.\n");
@@ -35,47 +33,49 @@ bool analyze() {
             return false;
         }
 
-        if(!insert_maybe(context.symbols, name->value, symbol)) {
+        if(!insert_maybe(context.symbols[type], name->value, symbol)) {
             printf("Multiple definitions.\n");
             return false;
         }
     }
 
     // NOTE(llw): Validate.
-    for(Usize i = 0; i < context.symbols.count; i += 1) {
-        if(!validate(context.symbols.entries[i].value)) {
-            return false;
+    for(Usize type = 0; type < SYMBOL_TYPE_COUNT; type += 1) {
+        auto &symbols = context.symbols[type];
+        for(Usize i = 0; i < symbols.count; i += 1) {
+            if(!validate(symbols.entries[i].value)) {
+                return false;
+            }
         }
     }
 
-    // NOTE(llw): Instantiate non-generic, inheriting pages.
-    for(Usize i = 0; i < context.symbols.count; i += 1) {
-        auto &symbol = context.symbols.entries[i].value;
+    // NOTE(llw): Instantiate and collect concrete pages.
+    for(Usize i = 0; i < context.symbols[SYMBOL_PAGE].count; i += 1) {
+        auto &symbol = context.symbols[SYMBOL_PAGE].entries[i].value;
+        auto expr = symbol.expression;
 
-        const auto &page = *symbol.expression;
-        auto inherits = has(page.arguments, context.strings.inherits);
-        if(symbol.type == SYM_PAGE && inherits) {
-
-            auto &expr = *allocate<Expression>(context.arena);
-            if(!instantiate_page(page, expr)) {
+        auto generic  = has(expr->arguments, context.strings.parameters);
+        auto inherits = has(expr->arguments, context.strings.inherits);
+        auto concrete = !generic && !inherits;
+        if(!generic && inherits) {
+            expr = allocate<Expression>(context.arena);
+            if(!instantiate_page(*symbol.expression, *expr)) {
+                return false;
+            }
+            if(!validate(*expr)) {
                 return false;
             }
 
-            auto name = page.arguments[context.strings.name];
-            insert(expr.arguments, context.strings.name, name);
-
-            if(!validate(expr)) {
-                return false;
-            }
-
-            symbol.expression = &expr;
+            concrete = true;
         }
 
+        if(concrete) {
+            push(context.pages, expr);
+        }
     }
 
     return true;
 }
-
 
 
 static bool is_list_of(
@@ -104,6 +104,11 @@ static bool is_list_of(
         *first_non_type = non_type;
     }
     return valid;
+}
+
+static bool is_generic_page(const Expression &expr) {
+    return expr.type == context.strings.page
+        && has(expr.arguments, context.strings.parameters);
 }
 
 static bool validate(const Expression &expr) {
@@ -143,7 +148,7 @@ static bool validate(const Expression &expr) {
         }
 
         auto parameters = get_pointer(args, context.strings.parameters);
-        auto inherits = get_pointer(args, context.strings.inherits);
+        auto inherits   = get_pointer(args, context.strings.inherits);
 
         auto is_generic = parameters != NULL;
         auto is_final   = !is_generic && !inherits;
@@ -172,12 +177,12 @@ static bool validate(const Expression &expr) {
             }
 
             // NOTE(llw): Check super existence and type.
-            auto symbol = get_pointer(context.symbols, inherits->value);
+            auto symbol = get_pointer(context.symbols[SYMBOL_PAGE], inherits->value);
             if(symbol == NULL) {
                 printf("Inherited page does not exist.\n");
                 return false;
             }
-            if(symbol->type != SYM_GENERIC_PAGE) {
+            if(!is_generic_page(*symbol->expression)) {
                 printf("Inherited page is not a generic page.\n");
                 return false;
             }
@@ -387,10 +392,11 @@ static bool insert_parameters(
 
         case ARG_BLOCK: {
             auto &block = arg.block;
-            for(Usize i = 0; i < block.count; i += 1) {
+            for(Usize i = 0; i < block.count; ) {
                 auto &expr = block[i];
                 auto &args = expr.arguments;
 
+                // NOTE(llw): Expression is to be replaced completely.
                 auto replace = get_pointer(parameters, expr.type);
                 if(replace) {
 
@@ -403,11 +409,18 @@ static bool insert_parameters(
                             return false;
                         }
 
-                        // NOTE(llw): Like push_at but removes block[i].
                         auto amount = replace->block.count;
-                        make_space_at(block, i, amount - 1);
-                        copy_values(block.values + i, replace->block.values, amount);
+                        if(amount > 0) {
+                            // NOTE(llw): Like push_at but removes block[i].
+                            make_space_at(block, i, amount - 1);
+                            copy_values(block.values + i, replace->block.values, amount);
+                        }
+                        else {
+                            remove_at(block, i);
+                        }
 
+                        // NOTE(llw): Skip inserted expressions.
+                        i += amount;
                         continue;
                     }
                     else {
@@ -417,11 +430,14 @@ static bool insert_parameters(
 
                 }
 
+                // NOTE(llw): Replace expression arguments.
                 for(Usize j = 0; j < args.count; j += 1) {
                     if(!insert_parameters(args.entries[j].value, parameters)) {
                         return false;
                     }
                 }
+
+                i += 1;
             }
 
             return true;
@@ -498,8 +514,8 @@ static bool instantiate_page(
     auto inherits = get_pointer(own_args, context.strings.inherits);
     if(inherits) {
 
-        auto super = context.symbols[inherits->value];
-        auto new_self = duplicate(*super.expression, context.temporary);
+        auto super = context.symbols[SYMBOL_PAGE][inherits->value];
+        auto new_self = duplicate(*super.expression, context.arena);
         if(!instantiate_page(self, new_self, result)) {
             return false;
         }
@@ -523,6 +539,11 @@ static bool instantiate_page(
     result.arguments = create_map<Interned_String, Argument>(context.arena);
     insert(
         result.arguments,
+        context.strings.name,
+        page.arguments[context.strings.name]
+    );
+    insert(
+        result.arguments,
         context.strings.body,
         create_argument(ARG_BLOCK, context.arena)
     );
@@ -537,11 +558,9 @@ static bool instantiate_page(
         create_argument(ARG_LIST, context.arena)
     );
 
-    TEMP_SCOPE(context.temporary);
-
     auto super_name = page.arguments[context.strings.inherits].value;
-    auto super = *context.symbols[super_name].expression;
-    super = duplicate(super, context.temporary);
+    auto super = *context.symbols[SYMBOL_PAGE][super_name].expression;
+    super = duplicate(super, context.arena);
 
     auto success = instantiate_page(page, super, result);
     page_build_result(page, result);

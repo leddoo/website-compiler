@@ -8,8 +8,9 @@ bool analyze();
 
 
 enum Symbol_Type {
-    SYM_PAGE,
-    SYM_GENERIC_PAGE,
+    SYMBOL_PAGE,
+
+    SYMBOL_TYPE_COUNT,
 };
 
 enum Symbol_State {
@@ -20,8 +21,6 @@ enum Symbol_State {
 
 struct Symbol {
     Expression *expression;
-
-    Symbol_Type type;
     Symbol_State state;
 };
 

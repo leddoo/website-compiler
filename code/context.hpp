@@ -37,7 +37,9 @@ extern struct Context {
     Array<Expression> expressions;
 
     // Analyzer
-    Map<Interned_String, Symbol> symbols;
+    Map<Interned_String, Symbol> symbols[SYMBOL_TYPE_COUNT];
+
+    Array<Expression *> pages;
 
 } context;
 

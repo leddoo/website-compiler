@@ -1,4 +1,9 @@
 (page
+    name: "simple",
+    body: {},
+)
+
+(page
     name: "empty",
     body: { foo },
     parameters: [ foo ],
@@ -23,7 +28,7 @@
 (page
     name: "template",
     inherits: "root",
-    parameters: [ content ],
+    parameters: [ content, bar ],
     title: "template",
     icon: "base_icon.ico",
     style_sheets: [ "main.css" ],
@@ -32,8 +37,9 @@
         text type: "h1", value: "header"
         content
         text type: "h1", value: "footer"
+        bar
     },
-    foo: "foo",
+    foo: "foo as text",
 )
 
 (page
@@ -51,5 +57,6 @@
         }
         spacer value: 1
     },
+    bar: {}
 )
 

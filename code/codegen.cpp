@@ -25,17 +25,14 @@ static void generate_html(
 bool codegen() {
 
     // NOTE(llw): Generate html for pages.
-    for(Usize i = 0; i < context.symbols.count; i += 1) {
-        auto name = context.symbols.entries[i].key;
-        const auto &symbol = context.symbols.entries[i].value;
+    for(Usize i = 0; i < context.pages.count; i += 1) {
+        const auto &page = *context.pages[i];
+        auto name = page.arguments[context.strings.name].value;
+        auto buffer = create_array<U8>(context.arena);
 
-        if(symbol.type == SYM_PAGE) {
-            auto buffer = create_array<U8>(context.arena);
+        generate_html(buffer, page);
 
-            generate_html(buffer, *symbol.expression);
-
-            write_file(name, STRING(".html"), buffer);
-        }
+        write_file(name, STRING(".html"), buffer);
     }
 
     return true;

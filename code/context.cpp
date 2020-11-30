@@ -1,13 +1,18 @@
 #include "context.hpp"
 
-Context context = {};
+Context context;
 
 void setup_context() {
+    context = {};
+
     context.arena        = create_arena();
     context.temporary    = create_arena();
     context.string_table = create_string_table(context.arena);
     context.expressions  = { &context.arena };
-    context.symbols      = create_map<Interned_String, Symbol>(context.arena);
+    for(Usize i = 0; i < SYMBOL_TYPE_COUNT; i += 1) {
+        context.symbols[i] = create_map<Interned_String, Symbol>(context.arena);
+    }
+    context.pages = { &context.arena };
 
     context.strings.dot    = intern(context.string_table, STRING("."));
     context.strings.comma  = intern(context.string_table, STRING(","));
