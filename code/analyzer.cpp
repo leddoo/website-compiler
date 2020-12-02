@@ -144,10 +144,13 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     };
 
 
-    auto validate_arg_type = [&](Interned_String name, Argument_Type type, bool required) {
+    auto validate_arg_type_p = [&](
+        Interned_String name, Argument_Type type,
+        bool required,
+        const Argument *arg
+    ) {
         use_arg(name);
 
-        auto arg = get_pointer(args, name);
         if(arg == NULL) {
             if(required) {
                 printf("Error: Missing required argument '%s'.\n",
@@ -167,6 +170,11 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         }
 
         return true;
+    };
+
+    auto validate_arg_type = [&](Interned_String name, Argument_Type type, bool required) {
+        auto arg = get_pointer(args, name);
+        return validate_arg_type_p(name, type, required, arg);
     };
 
     auto validate_arg_list = [&](Interned_String name, Argument_Type type, bool required) {
@@ -448,14 +456,54 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             return false;
         }
     }
+    // SUB form field.
+    else if(expr.type == context.strings.form_field) {
+        if(!vc.in_form) {
+            printf("Error: form_field needs to be inside a form.\n");
+            return false;
+        }
+
+        if(!full_id) {
+            printf("Error: form_field requires an id.\n");
+            return false;
+        }
+
+        auto type    = get_pointer(args, context.strings.type);
+        auto min     = get_pointer(args, context.strings.min);
+        auto max     = get_pointer(args, context.strings.max);
+        auto locked  = get_pointer(args, context.strings.locked);
+        auto initial = get_pointer(args, context.strings.initial);
+
+        if(    !validate_arg_type_p(context.strings.type, ARG_STRING, true, type)
+            || !validate_arg_type  (context.strings.title, ARG_STRING, true)
+            || !validate_arg_type_p(context.strings.locked, ARG_NUMBER, false, locked)
+        ) {
+            return false;
+        }
+
+        // NOTE(llw): Type specific validation.
+        if(    type->value == context.strings.text
+            || type->value == context.strings.email
+        ) {
+            if(    !validate_arg_type_p(context.strings.min, ARG_NUMBER, false, min)
+                || !validate_arg_type_p(context.strings.max, ARG_NUMBER, false, max)
+                || !validate_arg_type_p(context.strings.initial, ARG_STRING, false, initial)
+            ) {
+                return false;
+            }
+        }
+        else {
+            printf("Invalid form field type.\n");
+            return false;
+        }
+    }
     // SUB text.
     else if(expr.type == context.strings.text) {
-        auto type  = get_pointer(args, context.strings.type);
-        auto value = get_pointer(args, context.strings.value);
-        if(    !is_string(type)
-            || !is_string(value)
+        auto type = get_pointer(args, context.strings.type);
+
+        if(    !validate_arg_type_p(context.strings.type, ARG_STRING, true, type)
+            || !validate_arg_type  (context.strings.value, ARG_STRING, true)
         ) {
-            printf("Invalid text expression.\n");
             return false;
         }
 
@@ -463,9 +511,6 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             printf("Invalid text type.\n");
             return false;
         }
-
-        use_arg(context.strings.type);
-        use_arg(context.strings.value);
     }
     // SUB spacer.
     else if(expr.type == context.strings.spacer) {

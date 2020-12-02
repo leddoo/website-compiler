@@ -29,7 +29,9 @@ extern struct Context {
             h1, p, span,
             parameters, inherits,
             form, form_field, form_submit,
-            form_list, form_list_item;
+            form_list, form_list_item,
+            min, max, locked, initial,
+            email;
     } strings;
 
     Map<Interned_String, int> valid_text_types;

@@ -39,12 +39,12 @@ void codegen() {
 
 const String page_html_1 = STRING(
     "<!DOCTYPE html>\n"
-    "<html lang = \"de\">\n"
+    "<html lang=\"de\">\n"
     "\n"
     "<head>\n"
-    "    <meta charset = \"UTF-8\">\n"
-    "    <meta name = \"viewport\" content = \"width = device-width, initial-scale = 1.0\">\n"
-    "    <meta http-equiv = \"X-UA-Compatible\" content = \"ie=edge\">\n"
+    "    <meta charset=\"UTF-8\">\n"
+    "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+    "    <meta http-equiv=\"X-UA-Compatible\" content=\"ie=edge\">\n"
 );
 
 const String page_html_2 = STRING(
@@ -95,7 +95,7 @@ static void generate_html(
 
     auto id_string = create_array<U8>(context.temporary);
     if(full_id != 0) {
-        push(id_string, STRING(" id = \""));
+        push(id_string, STRING(" id=\""));
         push(id_string, full_id);
         push(id_string, STRING("\""));
     }
@@ -119,7 +119,7 @@ static void generate_html(
         auto icon = get_pointer(args, context.strings.icon);
         if(icon != NULL) {
             do_indent();
-            push(buffer, STRING("<link rel = \"icon\" href = \""));
+            push(buffer, STRING("<link rel=\"icon\" href=\""));
             push(buffer, icon->value);
             push(buffer, STRING("\">\n"));
         }
@@ -129,7 +129,7 @@ static void generate_html(
             const auto &list = style_sheets->list;
             for(Usize i = 0; i < list.count; i += 1) {
                 do_indent();
-                push(buffer, STRING("<link rel = \"stylesheet\" href = \""));
+                push(buffer, STRING("<link rel=\"stylesheet\" href=\""));
                 push(buffer, list[i].value);
                 push(buffer, STRING("\">\n"));
             }
@@ -140,7 +140,7 @@ static void generate_html(
             const auto &list = scripts->list;
             for(Usize i = 0; i < list.count; i += 1) {
                 do_indent();
-                push(buffer, STRING("<script src = \""));
+                push(buffer, STRING("<script src=\""));
                 push(buffer, list[i].value);
                 push(buffer, STRING("\"></script>\n"));
             }
@@ -149,7 +149,7 @@ static void generate_html(
         push(buffer, page_html_2);
 
         do_indent();
-        push(buffer, STRING("<div id = \"page\">\n"));
+        push(buffer, STRING("<div id=\"page\">\n"));
 
         const auto &children = args[context.strings.body].block;
         for(Usize i = 0; i < children.count; i += 1) {
@@ -178,7 +178,34 @@ static void generate_html(
         push(buffer, STRING("</div>\n"));
     }
     else if(expr.type == context.strings.form) {
-        push(buffer, STRING("<form>TBD</form>\n"));
+        push(buffer, STRING("<form"));
+        push(buffer, id_string);
+        push(buffer, STRING(">\n"));
+
+        auto body = get_pointer(args, context.strings.body);
+        if(body != NULL) {
+            const auto &children = body->block;
+            for(Usize i = 0; i < children.count; i += 1) {
+                generate_html(buffer, children[i], parent, indent + 1);
+            }
+        }
+
+        do_indent();
+        push(buffer, STRING("</form>\n"));
+    }
+    else if(expr.type == context.strings.form_field) {
+        push(buffer, STRING("<label for=\""));
+        push(buffer, full_id);
+        push(buffer, STRING("\">"));
+        push(buffer, args[context.strings.title].value);
+        push(buffer, STRING("</label>\n"));
+
+        do_indent();
+        push(buffer, STRING("<input"));
+        push(buffer, id_string);
+        push(buffer, STRING(" type=\""));
+        push(buffer, args[context.strings.type].value);
+        push(buffer, STRING("\">\n"));
     }
     else if(expr.type == context.strings.text) {
         auto type  = args[context.strings.type].value;
@@ -202,7 +229,7 @@ static void generate_html(
         if(has(args, context.strings.value)) {
             auto value = args[context.strings.value].value;
 
-            push(buffer, STRING("<div style = \"spacer_"));
+            push(buffer, STRING("<div style=\"spacer_"));
             push(buffer, value);
             push(buffer, STRING("\"></div>\n"));
         }
@@ -210,12 +237,12 @@ static void generate_html(
             auto desktop = args[context.strings.desktop].value;
             auto mobile  = args[context.strings.mobile].value;
 
-            push(buffer, STRING("<div style = \"spacer_"));
+            push(buffer, STRING("<div style=\"spacer_"));
             push(buffer, desktop);
             push(buffer, STRING(" desktop\"></div>\n"));
 
             do_indent();
-            push(buffer, STRING("<div style = \"spacer_"));
+            push(buffer, STRING("<div style=\"spacer_"));
             push(buffer, mobile);
             push(buffer, STRING(" mobile\"></div>\n"));
         }

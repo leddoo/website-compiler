@@ -73,6 +73,13 @@ void setup_context() {
     strings.form_list      = intern(table, STRING("form_list"));
     strings.form_list_item = intern(table, STRING("form_list_item"));
 
+    strings.min     = intern(table, STRING("min"));
+    strings.max     = intern(table, STRING("max"));
+    strings.locked  = intern(table, STRING("locked"));
+    strings.initial = intern(table, STRING("initial"));
+
+    strings.email = intern(table, STRING("email"));
+
 
     TEMP_SCOPE(context.temporary);
 
