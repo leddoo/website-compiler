@@ -177,6 +177,9 @@ static void generate_html(
         do_indent();
         push(buffer, STRING("</div>\n"));
     }
+    else if(expr.type == context.strings.form) {
+        push(buffer, STRING("<form>TBD</form>\n"));
+    }
     else if(expr.type == context.strings.text) {
         auto type  = args[context.strings.type].value;
         auto value = args[context.strings.value].value;

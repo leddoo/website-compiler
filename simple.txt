@@ -69,10 +69,18 @@
     },
 )
 
+(form
+    name: "yay, forms",
+    body: {}
+)
+
 (page
     name: "forms",
     body: {
         div id: "test", type: "wrapper", expression: { div body: { div id: "hi" } }
+        div type: "wrapper", expression: {}, body: {}
+
+        form type: "yay, forms"
     },
 )
 

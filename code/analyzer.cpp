@@ -26,6 +26,7 @@ _inline bool is_concrete_page(const Expression &expr) {
 struct Validate_Context {
     Map<Interned_String, int> *id_table;
     Interned_String id_prefix;
+    bool in_form;
 };
 
 static bool validate(Symbol &symbol);
@@ -54,6 +55,9 @@ bool analyze() {
         }
         else if(expr.type == context.strings.div) {
             type = SYMBOL_DIV;
+        }
+        else if(expr.type == context.strings.form) {
+            type = SYMBOL_FORM;
         }
         else {
             printf("Unrecognized definition type.\n");
@@ -238,14 +242,17 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         }
 
         // NOTE(llw): Check parameters provided.
-        const auto &params = symbol->expression->arguments[context.strings.parameters].list;
-        for(Usize i = 0; i < params.count; i += 1) {
-            auto param_name = params[i].value;
-            if(!has(args, param_name)) {
-                printf("Parameter not provided.\n");
-                return false;
+        auto parameters = get_pointer(symbol->expression->arguments, context.strings.parameters);
+        if(parameters) {
+            const auto &params = parameters->list;
+            for(Usize i = 0; i < params.count; i += 1) {
+                auto param_name = params[i].value;
+                if(!has(args, param_name)) {
+                    printf("Parameter not provided.\n");
+                    return false;
+                }
+                use_arg(param_name);
             }
-            use_arg(param_name);
         }
 
         return true;
@@ -381,8 +388,20 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             return false;
         }
     }
-    // SUB div.
-    else if(expr.type == context.strings.div) {
+    // SUB div/form.
+    else if(expr.type == context.strings.div
+        || expr.type == context.strings.form
+    ) {
+        use_arg(context.strings.body);
+
+        if(expr.type == context.strings.form) {
+            if(vc.in_form) {
+                printf("Error: Forms cannot be nested.\n");
+                return false;
+            }
+            vc.in_form = true;
+        }
+
         auto type = get_pointer(args, context.strings.type);
 
         auto name = get_pointer(args, context.strings.name);
@@ -391,7 +410,6 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         // NOTE(llw): Definition.
         if(name != NULL) {
             use_arg(context.strings.name);
-            use_arg(context.strings.body);
             use_arg(context.strings.parameters);
 
             if(!validate_parameters()) {
@@ -408,20 +426,25 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             }
 
             auto symbol_type = SYMBOL_DIV;
+            if(expr.type == context.strings.form) {
+                symbol_type = SYMBOL_FORM;
+            }
+            else {
+                assert(expr.type == context.strings.div);
+            }
+
             if(!validate_reference(type->value, symbol_type)) {
                 return false;
             }
         }
         // NOTE(llw): Instance.
         else if(body != NULL) {
-            use_arg(context.strings.body);
-
             if(!validate_body(*body, vc, full_id)) {
                 return false;
             }
         }
         else if(full_id == 0) {
-            printf("Error: Empty div.\n");
+            printf("Error: Empty %s.\n", context.string_table[expr.type].values);
             return false;
         }
     }
@@ -650,10 +673,19 @@ static bool instantiate(
             auto &expr = block[expr_index];
 
             auto type = get_pointer(expr.arguments, context.strings.type);
-            if(    type != 0
-                && expr.type == context.strings.div
-            ) {
-                auto symbol = context.symbols[SYMBOL_DIV][type->value];
+            if(type != 0 && (
+                   expr.type == context.strings.div
+                || expr.type == context.strings.form
+            )) {
+                auto symbol_type = SYMBOL_DIV;
+                if(expr.type == context.strings.form) {
+                    symbol_type = SYMBOL_FORM;
+                }
+                else {
+                    assert(expr.type == context.strings.div);
+                }
+
+                auto symbol = context.symbols[symbol_type][type->value];
                 auto instance = duplicate(*symbol.expression, context.arena);
                 if(!instantiate(&expr, instance)) {
                     return false;
