@@ -3,6 +3,11 @@
 
 #include "stdio.h"
 
+static bool is_generic_page(const Expression &expr) {
+    return expr.type == context.strings.page
+        && has(expr.arguments, context.strings.parameters);
+}
+
 struct Validate_Context {
     Map<Interned_String, int> *id_table;
     Interned_String id_prefix;
@@ -10,7 +15,7 @@ struct Validate_Context {
 
 static bool validate(Symbol &symbol);
 static bool validate(const Expression &expr, Validate_Context vc);
-static bool instantiate_page(const Expression &page, Expression &result);
+static Expression *instantiate_page(const Expression &page);
 
 
 bool analyze() {
@@ -26,6 +31,9 @@ bool analyze() {
 
         if(expr.type == context.strings.page) {
             type = SYMBOL_PAGE;
+        }
+        else if(expr.type == context.strings.div) {
+            type = SYMBOL_DIV;
         }
         else {
             printf("Not a definition.\n");
@@ -54,31 +62,17 @@ bool analyze() {
         }
     }
 
-    // NOTE(llw): Instantiate and collect concrete pages.
+    // NOTE(llw): Instantiate pages.
     for(Usize i = 0; i < context.symbols[SYMBOL_PAGE].count; i += 1) {
         auto &symbol = context.symbols[SYMBOL_PAGE].entries[i].value;
-        auto expr = symbol.expression;
 
-        auto generic  = has(expr->arguments, context.strings.parameters);
-        auto inherits = has(expr->arguments, context.strings.inherits);
-        auto concrete = !generic && !inherits;
-        if(!generic && inherits) {
-            expr = allocate<Expression>(context.arena);
-            if(!instantiate_page(*symbol.expression, *expr)) {
+        if(!is_generic_page(*symbol.expression)) {
+            auto instance = instantiate_page(*symbol.expression);
+            if(instance == NULL) {
                 return false;
             }
 
-            auto symbol = Symbol {};
-            symbol.expression = expr;
-            if(!validate(symbol)) {
-                return false;
-            }
-
-            concrete = true;
-        }
-
-        if(concrete) {
-            push(context.pages, expr);
+            push(context.pages, instance);
         }
     }
 
@@ -114,15 +108,33 @@ static bool is_list_of(
     return valid;
 }
 
-static bool is_generic_page(const Expression &expr) {
-    return expr.type == context.strings.page
-        && has(expr.arguments, context.strings.parameters);
-}
-
 static bool is_concrete_page(const Expression &expr) {
     return expr.type == context.strings.page
         && !has(expr.arguments, context.strings.parameters)
         && !has(expr.arguments, context.strings.inherits);
+}
+
+static bool validate_body(
+    const Argument &arg,
+    Validate_Context vc, Interned_String full_id
+) {
+    if(arg.type != ARG_BLOCK) {
+        printf("Error: Body must be a block.\n");
+        return false;
+    }
+
+    if(full_id) {
+        vc.id_prefix = full_id;
+    }
+
+    const auto &block = arg.block;
+    for(Usize i = 0; i < block.count; i += 1) {
+        if(!validate(block[i], vc)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 static bool validate(const Expression &expr, Validate_Context vc) {
@@ -172,6 +184,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
 
 
+    // SUB page.
     if(expr.type == context.strings.page) {
         use_arg(context.strings.name);
         use_arg(context.strings.body);
@@ -271,16 +284,8 @@ static bool validate(const Expression &expr, Validate_Context vc) {
                 return false;
             }
 
-            if(body->type != ARG_BLOCK) {
-                printf("Page body must be a block.\n");
+            if(!validate_body(*body, vc, 0)) {
                 return false;
-            }
-
-            const auto &children = body->block;
-            for(Usize i = 0; i < children.count; i += 1) {
-                if(!validate(children[i], vc)) {
-                    return false;
-                }
             }
         }
 
@@ -319,31 +324,82 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         }
 
     }
+    // SUB div.
     else if(expr.type == context.strings.div) {
-        use_arg(context.strings.body);
+        auto type = get_pointer(args, context.strings.type);
 
+        auto name = get_pointer(args, context.strings.name);
         auto body = get_pointer(args, context.strings.body);
-        if(body != NULL) {
-            if(!is_block(body)) {
-                printf("Error: A div's 'body' argument must be a block.\n");
+
+        auto parameters = get_pointer(args, context.strings.parameters);
+
+        if(expr.parent && name != NULL) {
+            printf("Div definitions cannot be nested.\n");
+            return false;
+        }
+
+        // NOTE(llw): Reference.
+        if(type != NULL) {
+            use_arg(context.strings.type);
+
+            if(!is_string(type)) {
+                printf("Error: Div type must be a string.\n");
                 return false;
             }
 
-            if(full_id) {
-                vc.id_prefix = full_id;
+            // NOTE(llw): Existence.
+            auto symbol = get_pointer(context.symbols[SYMBOL_DIV], type->value);
+            if(symbol == NULL) {
+                printf("Div does not exist.\n");
+                return false;
             }
 
-            const auto &block = body->block;
-            for(Usize i = 0; i < block.count; i += 1) {
-                if(!validate(block[i], vc)) {
+            const auto &def = *symbol->expression;
+            auto parameters = get_pointer(def.arguments, context.strings.parameters);
+            if(parameters) {
+                const auto &list = parameters->list;
+                for(Usize i = 0; i < list.count; i += 1) {
+                    auto name = list[i].value;
+                    if(!has(args, name)) {
+                        printf("Parameter not provided.\n");
+                        return false;
+                    }
+
+                    use_arg(name);
+                }
+            }
+        }
+        // NOTE(llw): Definition.
+        else if(name != NULL) {
+            use_arg(context.strings.name);
+            use_arg(context.strings.body);
+            use_arg(context.strings.parameters);
+
+            if(parameters) {
+                if(!is_list_of(*parameters, ARG_ATOM, NULL)) {
+                    printf("Error: 'parameters' must be a list of atoms.\n");
                     return false;
                 }
+            }
+        }
+        // NOTE(llw): Instance.
+        else if(body != NULL) {
+            use_arg(context.strings.body);
+
+            if(parameters != NULL) {
+                printf("Div instances cannot have parameters.\n");
+                return false;
+            }
+
+            if(!validate_body(*body, vc, full_id)) {
+                return false;
             }
         }
         else if(full_id == 0) {
             printf("Warning: Empty div.\n");
         }
     }
+    // SUB text.
     else if(expr.type == context.strings.text) {
         auto type  = get_pointer(args, context.strings.type);
         auto value = get_pointer(args, context.strings.value);
@@ -362,6 +418,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         use_arg(context.strings.type);
         use_arg(context.strings.value);
     }
+    // SUB spacer.
     else if(expr.type == context.strings.spacer) {
         if(has_id) {
             printf("Spacers can't have ids.\n");
@@ -384,6 +441,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             return false;
         }
     }
+    // SUB default.
     else {
         auto type = context.string_table[expr.type];
         printf("Unrecognized expression type: '%s'\n", type.values);
@@ -428,7 +486,7 @@ static bool validate(Symbol &symbol) {
 }
 
 
-static bool insert_parameters(
+static bool insert_arguments(
     Argument &arg,
     const Map<Interned_String, Argument> parameters
 ) {
@@ -449,7 +507,7 @@ static bool insert_parameters(
         case ARG_LIST: {
             auto &list = arg.list;
             for(Usize i = 0; i < list.count; i += 1) {
-                if(!insert_parameters(list[i], parameters)) {
+                if(!insert_arguments(list[i], parameters)) {
                     return false;
                 }
             }
@@ -499,7 +557,7 @@ static bool insert_parameters(
 
                 // NOTE(llw): Replace expression arguments.
                 for(Usize j = 0; j < args.count; j += 1) {
-                    if(!insert_parameters(args.entries[j].value, parameters)) {
+                    if(!insert_arguments(args.entries[j].value, parameters)) {
                         return false;
                     }
                 }
@@ -517,120 +575,138 @@ static bool insert_parameters(
     }
 }
 
-
-static void page_build_result(const Expression &self, Expression &result) {
-    const auto &own_args = self.arguments;
-    auto &res_args = result.arguments;
-
-    auto body = get_pointer(own_args, context.strings.body);
-    if(body) {
-        res_args[context.strings.body] = duplicate(*body, context.arena);
-    }
-
-    auto title = get_pointer(own_args, context.strings.title);
-    if(title) {
-        insert_or_set(res_args, context.strings.title, *title);
-    }
-
-    auto icon = get_pointer(own_args, context.strings.icon);
-    if(icon) {
-        insert_or_set(res_args, context.strings.icon, *icon);
-    }
-
-    auto style_sheets = get_pointer(own_args, context.strings.style_sheets);
-    if(style_sheets) {
-        push(res_args[context.strings.style_sheets].list, style_sheets->list);
-    }
-
-    auto scripts = get_pointer(own_args, context.strings.scripts);
-    if(scripts) {
-        push(res_args[context.strings.scripts].list, scripts->list);
-    }
-
-}
-
-static bool instantiate_page(
-    const Expression &derived,
-    Expression &self, // modified
-    Expression &result
+// - Both reference and definition are modified!
+// - Remove parameter values, inherits/type from reference and insert into
+//   definition. Remove name and parameters from definition.
+// - Instantiate pages and references in definition.body (inherit arguments,
+//   outermost writer wins).
+static bool instantiate(
+    Expression *reference,
+    Expression &definition
 ) {
     TEMP_SCOPE(context.temporary);
 
-    auto &own_args = self.arguments;
+    auto &args = definition.arguments;
 
-    // NOTE(llw): Collect parameters.
-    auto parameters = create_map<Interned_String, Argument>(context.temporary);
-    const auto &name_list = own_args[context.strings.parameters].list;
-    for(Usize i = 0; i < name_list.count; i += 1) {
-        auto name = name_list[i].value;
-        insert(parameters, name, derived.arguments[name]);
-    }
+    // NOTE(llw): Insert arguments.
+    auto parameters = get_pointer(args, context.strings.parameters);
+    if(parameters) {
+        assert(reference != NULL);
 
-    // NOTE(llw): Insert parameters into self.
-    for(Usize i = 0; i < own_args.count; i += 1) {
-        auto name = own_args.entries[i].key;
-        auto &arg = own_args.entries[i].value;
-        if(name != context.strings.parameters) {
-            if(!insert_parameters(arg, parameters)) {
+        // NOTE(llw): Collect arguments from reference.
+        auto arguments = create_map<Interned_String, Argument>(context.temporary);
+        for(Usize i = 0; i < parameters->list.count; i += 1) {
+            auto name = parameters->list[i].value;
+            insert(arguments, name, reference->arguments[name]);
+
+            // NOTE(llw): Remove argument from reference.
+            remove(reference->arguments, name);
+        }
+
+        // NOTE(llw): Remove parameter list from definition.
+        remove(args, context.strings.parameters);
+
+        // NOTE(llw): Insert arguments into definition.
+        for(Usize i = 0; i < args.count; i += 1) {
+            auto &arg = args.entries[i].value;
+            if(!insert_arguments(arg, arguments)) {
                 return false;
             }
         }
     }
 
-    // NOTE(llw): Recurse.
-    auto inherits = get_pointer(own_args, context.strings.inherits);
-    if(inherits) {
+    // NOTE(llw): Instantiate references in body.
+    auto body = get_pointer(args, context.strings.body);
+    if(body) {
+        auto &block = body->block;
+        for(Usize expr_index = 0; expr_index < block.count; expr_index += 1) {
+            auto &expr = block[expr_index];
 
-        auto super = context.symbols[SYMBOL_PAGE][inherits->value];
-        auto new_self = duplicate(*super.expression, context.arena);
-        if(!instantiate_page(self, new_self, result)) {
-            return false;
+            auto type = get_pointer(expr.arguments, context.strings.type);
+            if(    type != 0
+                && expr.type == context.strings.div
+            ) {
+                auto symbol = context.symbols[SYMBOL_DIV][type->value];
+                auto instance = duplicate(*symbol.expression, context.arena);
+                if(!instantiate(&expr, instance)) {
+                    return false;
+                }
+
+                auto &inst_args = instance.arguments;
+                auto &def_args  = expr.arguments;
+
+                // NOTE(llw): Remove name/type.
+                remove(inst_args, context.strings.name);
+                remove(def_args, context.strings.type);
+
+                // NOTE(llw): Merge.
+                for(Usize i = 0; i < inst_args.count; i += 1) {
+                    auto name = inst_args.entries[i].key;
+                    auto value = inst_args.entries[i].value;
+                    insert_maybe(def_args, name, value);
+                }
+            }
         }
     }
 
+    // NOTE(llw): Recurse on pages.
+    auto inherits = get_pointer(args, context.strings.inherits);
+    if(    inherits != NULL
+        && definition.type == context.strings.page
+    ) {
+        const auto &symbol = context.symbols[SYMBOL_PAGE][inherits->value];
 
-    page_build_result(self, result);
+        // NOTE(llw): Instantiate.
+        auto instance = duplicate(*symbol.expression, context.arena);
+        if(!instantiate(&definition, instance)) {
+            return false;
+        }
+
+        auto &inst_args = instance.arguments;
+        auto &def_args = definition.arguments;
+
+        // NOTE(llw): Remove name/inherits.
+        remove(inst_args, context.strings.name);
+        remove(def_args, context.strings.inherits);
+
+        // NOTE(llw): Merge.
+        for(Usize i = 0; i < inst_args.count; i += 1) {
+            auto name = inst_args.entries[i].key;
+            auto &value = inst_args.entries[i].value;
+
+            if(    name != context.strings.style_sheets
+                && name != context.strings.scripts
+            ) {
+                insert_maybe(def_args, name, value);
+            }
+            else {
+                auto &list = value.list;
+                auto def_values = get_pointer(def_args, name);
+                if(def_values) {
+                    push(list, def_values->list);
+                    def_values->list = list;
+                }
+            }
+        }
+    }
 
     return true;
 }
 
-static bool instantiate_page(
-    const Expression &page,
-    Expression &result
-) {
-    // NOTE(llw): Initialize result.
-    context.next_expression_id += 1;
-    result = {};
-    result.id = context.next_expression_id;
-    result.type = context.strings.page;
-    result.arguments = create_map<Interned_String, Argument>(context.arena);
-    insert(
-        result.arguments,
-        context.strings.name,
-        page.arguments[context.strings.name]
-    );
-    insert(
-        result.arguments,
-        context.strings.body,
-        create_argument(ARG_BLOCK, context.arena)
-    );
-    insert(
-        result.arguments,
-        context.strings.style_sheets,
-        create_argument(ARG_LIST, context.arena)
-    );
-    insert(
-        result.arguments,
-        context.strings.scripts,
-        create_argument(ARG_LIST, context.arena)
-    );
+static Expression *instantiate_page(const Expression &page) {
+    auto result = allocate<Expression>(context.arena);
+    *result = duplicate(page, context.arena);
 
-    auto super_name = page.arguments[context.strings.inherits].value;
-    auto super = *context.symbols[SYMBOL_PAGE][super_name].expression;
-    super = duplicate(super, context.arena);
+    if(!instantiate(NULL, *result)) {
+        return NULL;
+    }
 
-    auto success = instantiate_page(page, super, result);
-    page_build_result(page, result);
-    return success;
+    auto symbol = Symbol {};
+    symbol.expression = result;
+    if(!validate(symbol)) {
+        return NULL;
+    }
+
+    return result;
 }
 

@@ -26,7 +26,9 @@ extern struct Context {
             page, title, icon, style_sheets, scripts,
             text, spacer, div,
             h1, p, span,
-            parameters, inherits;
+            parameters, inherits,
+            form, form_field, form_submit,
+            form_list, form_list_item;
     } strings;
 
     Map<Interned_String, int> valid_text_types;

@@ -87,6 +87,10 @@ static void generate_html(
         else if(gid != NULL) {
             full_id = make_full_id_from_gid(gid->value);
         }
+
+        if(full_id) {
+            parent = full_id;
+        }
     }
 
     auto id_string = create_array<U8>(context.temporary);
@@ -166,7 +170,7 @@ static void generate_html(
         if(body != NULL) {
             const auto &children = body->block;
             for(Usize i = 0; i < children.count; i += 1) {
-                generate_html(buffer, children[i], full_id, indent + 1);
+                generate_html(buffer, children[i], parent, indent + 1);
             }
         }
 

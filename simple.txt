@@ -57,6 +57,22 @@
         }
         spacer value: 1
     },
-    bar: {}
+    bar: {},
+)
+
+
+(div
+    name: "wrapper",
+    parameters: [ expression ],
+    body: {
+        expression
+    },
+)
+
+(page
+    name: "forms",
+    body: {
+        div id: "test", type: "wrapper", expression: { div body: { div id: "hi" } }
+    },
 )
 

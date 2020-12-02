@@ -1,15 +1,15 @@
 (form_list_item name: "name", body: {
     (form_field
+        title: "Vorname",
         type: "text",
         id: "given_name",
-        title: "Vorname",
         min: 1,
         max: 64,
     )
     (form_field
+        title: "Nachname",
         type: "text",
         id: "surname",
-        title: "Nachname",
         min: 1,
         max: 64,
     )
@@ -17,37 +17,38 @@
 
 (form name: "reservierung", body: {
     (form_field
-        type: "locked",
-        id: "email",
         title: "E-Mail Adresse",
-        value: "",
+        type: "email",
+        id: "email",
+        initial: "",
+        locked: 1,
     )
     (form_field
+        title: "Termin",
         type: "select",
         id: "date",
-        title: "Termin",
         initial: {
             option text: "Bitte auswählen..."
         },
     )
     (form_field
+        title: "Telefon",
         type: "text",
         id: "phone",
-        title: "Telefon",
         min: 1,
         max: 32,
     )
     (form_field
+        title: "Adresse",
         type: "text",
         id: "address",
-        title: "Adresse",
         min: 1,
         max: 128,
     )
     (form_list
+        title: "Personen",
         type: "name",
         id: "names",
-        title: "Personen",
         initial: {
             name given_name: "", surname: ""
         },
@@ -55,7 +56,7 @@
         max: 10,
     )
     (form_submit
-        text: "Reservieren",
+        title: "Reservieren",
     )
 })
 

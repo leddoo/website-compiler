@@ -56,6 +56,13 @@ void setup_context() {
     strings.parameters = intern(table, STRING("parameters"));
     strings.inherits   = intern(table, STRING("inherits"));
 
+    strings.form        = intern(table, STRING("form"));
+    strings.form_field  = intern(table, STRING("form_field"));
+    strings.form_submit = intern(table, STRING("form_submit"));
+
+    strings.form_list      = intern(table, STRING("form_list"));
+    strings.form_list_item = intern(table, STRING("form_list_item"));
+
 
     TEMP_SCOPE(context.temporary);
 

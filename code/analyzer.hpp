@@ -9,6 +9,8 @@ bool analyze();
 
 enum Symbol_Type {
     SYMBOL_PAGE,
+    SYMBOL_DIV,
+    SYMBOL_FORM,
 
     SYMBOL_TYPE_COUNT,
 };
