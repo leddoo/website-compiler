@@ -3,10 +3,25 @@
 
 #include "stdio.h"
 
-static bool is_generic_page(const Expression &expr) {
-    return expr.type == context.strings.page
-        && has(expr.arguments, context.strings.parameters);
+
+_inline bool is_definition(const Expression &expr) {
+    return has(expr.arguments, context.strings.name);
 }
+
+_inline bool is_generic(const Expression &expr) {
+    return has(expr.arguments, context.strings.parameters);
+}
+
+_inline bool is_page(const Expression &expr) {
+    return expr.type == context.strings.page;
+}
+
+_inline bool is_concrete_page(const Expression &expr) {
+    return is_page(expr)
+        && !is_generic(expr)
+        && !has(expr.arguments, context.strings.inherits);
+}
+
 
 struct Validate_Context {
     Map<Interned_String, int> *id_table;
@@ -14,7 +29,6 @@ struct Validate_Context {
 };
 
 static bool validate(Symbol &symbol);
-static bool validate(const Expression &expr, Validate_Context vc);
 static Expression *instantiate_page(const Expression &page);
 
 
@@ -24,11 +38,17 @@ bool analyze() {
     for(Usize i = 0; i < context.expressions.count; i += 1) {
         auto &expr = context.expressions[i];
 
-        auto symbol = Symbol {};
-        symbol.expression = &expr;
+        auto name = get_pointer(expr.arguments, context.strings.name);
+        if(name == NULL) {
+            printf("Definitions require names.\n");
+            return false;
+        }
+        if(name->type != ARG_STRING) {
+            printf("Names must be strings.\n");
+            return false;
+        }
 
         auto type = Symbol_Type {};
-
         if(expr.type == context.strings.page) {
             type = SYMBOL_PAGE;
         }
@@ -36,16 +56,12 @@ bool analyze() {
             type = SYMBOL_DIV;
         }
         else {
-            printf("Not a definition.\n");
+            printf("Unrecognized definition type.\n");
             return false;
         }
 
-        auto name = get_pointer(expr.arguments, context.strings.name);
-        if(name == NULL) {
-            printf("Definition without name.\n");
-            return false;
-        }
-
+        auto symbol = Symbol {};
+        symbol.expression = &expr;
         if(!insert_maybe(context.symbols[type], name->value, symbol)) {
             printf("Multiple definitions.\n");
             return false;
@@ -66,11 +82,13 @@ bool analyze() {
     for(Usize i = 0; i < context.symbols[SYMBOL_PAGE].count; i += 1) {
         auto &symbol = context.symbols[SYMBOL_PAGE].entries[i].value;
 
-        if(!is_generic_page(*symbol.expression)) {
+        if(!is_generic(*symbol.expression)) {
             auto instance = instantiate_page(*symbol.expression);
             if(instance == NULL) {
                 return false;
             }
+
+            assert(is_concrete_page(*instance));
 
             push(context.pages, instance);
         }
@@ -78,6 +96,7 @@ bool analyze() {
 
     return true;
 }
+
 
 
 static bool is_list_of(
@@ -108,34 +127,6 @@ static bool is_list_of(
     return valid;
 }
 
-static bool is_concrete_page(const Expression &expr) {
-    return expr.type == context.strings.page
-        && !has(expr.arguments, context.strings.parameters)
-        && !has(expr.arguments, context.strings.inherits);
-}
-
-static bool validate_body(
-    const Argument &arg,
-    Validate_Context vc, Interned_String full_id
-) {
-    if(arg.type != ARG_BLOCK) {
-        printf("Error: Body must be a block.\n");
-        return false;
-    }
-
-    if(full_id) {
-        vc.id_prefix = full_id;
-    }
-
-    const auto &block = arg.block;
-    for(Usize i = 0; i < block.count; i += 1) {
-        if(!validate(block[i], vc)) {
-            return false;
-        }
-    }
-
-    return true;
-}
 
 static bool validate(const Expression &expr, Validate_Context vc) {
 
@@ -147,6 +138,143 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     auto use_arg = [&](Interned_String arg) {
         insert_maybe(used_args, arg, 0);
     };
+
+
+    auto validate_arg_type = [&](Interned_String name, Argument_Type type, bool required) {
+        use_arg(name);
+
+        auto arg = get_pointer(args, name);
+        if(arg == NULL) {
+            if(required) {
+                printf("Error: Missing required argument '%s'.\n",
+                    context.string_table[name].values
+                );
+                return false;
+            }
+            return true;
+        }
+
+        if(arg->type != type) {
+            printf("Error: '%s' must be a %s\n",
+                context.string_table[name].values,
+                argument_type_strings[type]
+            );
+            return false;
+        }
+
+        return true;
+    };
+
+    auto validate_arg_list = [&](Interned_String name, Argument_Type type, bool required) {
+        use_arg(name);
+
+        auto arg = get_pointer(args, name);
+        if(arg == NULL) {
+            if(required) {
+                printf("Error: Missing required argument '%s'.\n",
+                    context.string_table[name].values
+                );
+                return false;
+            }
+            return true;
+        }
+
+        if(!is_list_of(*arg, type, NULL)) {
+            printf("Error: Non-%s argument in list '%s'.\n",
+                argument_type_strings[type],
+                context.string_table[name].values
+            );
+            return false;
+        }
+
+        return true;
+    };
+
+    auto validate_parameters = [&]() {
+        use_arg(context.strings.parameters);
+
+        auto parameters = get_pointer(args, context.strings.parameters);
+        if(parameters == NULL) {
+            return true;
+        }
+
+        if(parameters->type != ARG_LIST) {
+            printf("Error: Parameters must be a list.\n");
+            return false;
+        }
+
+        TEMP_SCOPE(context.temporary);
+        auto names = create_map<Interned_String, int>(context.temporary);
+
+        const auto &list = parameters->list;
+        for(Usize i = 0; i < list.count; i += 1) {
+            const auto &name = list[i];
+
+            if(name.type != ARG_ATOM) {
+                printf("Error: Parameter list must only contain atoms.\n");
+                return false;
+            }
+
+            if(!insert_maybe(names, name.value, 0)) {
+                printf("Error: Parameter declared multiple times.\n");
+                return false;
+            }
+        }
+
+        return true;
+    };
+
+    auto validate_reference = [&](Interned_String name, Symbol_Type type) {
+        // NOTE(llw): Existence.
+        auto symbol = get_pointer(context.symbols[type], name);
+        if(symbol == NULL) {
+            printf("Referenced symbol does not exist.\n");
+            return false;
+        }
+
+        // NOTE(llw): Recurse.
+        if(!validate(*symbol)) {
+            return false;
+        }
+
+        // NOTE(llw): Check parameters provided.
+        const auto &params = symbol->expression->arguments[context.strings.parameters].list;
+        for(Usize i = 0; i < params.count; i += 1) {
+            auto param_name = params[i].value;
+            if(!has(args, param_name)) {
+                printf("Parameter not provided.\n");
+                return false;
+            }
+            use_arg(param_name);
+        }
+
+        return true;
+    };
+
+    auto validate_body = [](
+        const Argument &arg,
+        Validate_Context vc, Interned_String full_id
+    ) {
+        if(arg.type != ARG_BLOCK) {
+            printf("Error: Body must be a block.\n");
+            return false;
+        }
+
+        if(full_id) {
+            vc.id_prefix = full_id;
+        }
+
+        const auto &block = arg.block;
+        for(Usize i = 0; i < block.count; i += 1) {
+            if(!validate(block[i], vc)) {
+                return false;
+            }
+        }
+
+        return true;
+    };
+
+
 
     // NOTE(llw): Check id existence.
     use_arg(context.strings.id);
@@ -164,6 +292,12 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         || gid != NULL && gid->type != ARG_STRING
     ) {
         printf("Ids must be strings.\n");
+        return false;
+    }
+    if(    lid != NULL && lid->value == context.strings.empty_string
+        || gid != NULL && gid->value == context.strings.empty_string
+    ) {
+        printf("Ids must not be empty strings.\n");
         return false;
     }
 
@@ -184,46 +318,35 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
 
 
+
+    if(expr.parent != NULL && is_definition(expr)) {
+        printf("Error: Definitions cannot be nested.\n");
+        return false;
+    }
+
+
     // SUB page.
     if(expr.type == context.strings.page) {
         use_arg(context.strings.name);
         use_arg(context.strings.body);
-        use_arg(context.strings.title);
-        use_arg(context.strings.icon);
-        use_arg(context.strings.style_sheets);
-        use_arg(context.strings.scripts);
 
-        if(expr.parent) {
-            printf("Pages cannot be nested.\n");
+        if(expr.parent != NULL) {
+            printf("Error: Pages cannot be nested.\n");
             return false;
         }
 
         if(has_id) {
-            printf("Error: Pages cannot have an id.\n");
+            printf("Error: Pages cannot have ids.\n");
             return false;
         }
 
-        auto parameters = get_pointer(args, context.strings.parameters);
-        auto inherits   = get_pointer(args, context.strings.inherits);
-
-        auto is_generic  = parameters != NULL;
-        auto is_concrete = !is_generic && !inherits;
-
-
-        // TODO(llw): Warn about duplicates, extract into procedure that prints
-        // the errors (takes name of list).
-
-        // NOTE(llw): Check parameters.
-        if(is_generic) {
-            use_arg(context.strings.parameters);
-
-            if(!is_list_of(*parameters, ARG_ATOM, NULL)) {
-                printf("Error: 'parameters' must be a list of atoms.\n");
-                return false;
-            }
+        // NOTE(llw): Check generic.
+        if(!validate_parameters()) {
+            return false;
         }
 
         // NOTE(llw): Check inheritance.
+        auto inherits = get_pointer(args, context.strings.inherits);
         if(inherits) {
             use_arg(context.strings.inherits);
 
@@ -232,55 +355,16 @@ static bool validate(const Expression &expr, Validate_Context vc) {
                 return false;
             }
 
-            // NOTE(llw): Check super existence and type.
-            auto symbol = get_pointer(context.symbols[SYMBOL_PAGE], inherits->value);
-            if(symbol == NULL) {
-                printf("Inherited page does not exist.\n");
+            if(!validate_reference(inherits->value, SYMBOL_PAGE)) {
                 return false;
-            }
-            if(!is_generic_page(*symbol->expression)) {
-                printf("Inherited page is not a generic page.\n");
-                return false;
-            }
-
-            // NOTE(llw): Recurse.
-            if(!validate(*symbol)) {
-                return false;
-            }
-
-            // NOTE(llw): Check parameters provided exactly once.
-            const auto &super = *symbol->expression;
-            const auto &params = super.arguments[context.strings.parameters].list;
-
-            TEMP_SCOPE(context.temporary);
-            auto provided = create_map<Interned_String, int>(context.temporary);
-
-            for(Usize i = 0; i < params.count; i += 1) {
-                auto name = params[i].value;
-
-                // TODO(llw): This does not actually check if a parameter is
-                // provided multiple times (that would be a parse error by the
-                // way). Therefore this is redundant once duplicates are
-                // detected in generics above.
-                if(!insert_maybe(provided, name, 0)) {
-                    printf("Duplicate parameter.\n");
-                    return false;
-                }
-
-                if(!has(args, name)) {
-                    printf("Parameter not provided.\n");
-                    return false;
-                }
-
-                use_arg(name);
             }
         }
 
         // NOTE(llw): Check body.
-        if(is_concrete) {
+        if(is_concrete_page(expr)) {
             auto body = get_pointer(args, context.strings.body);
             if(body == NULL) {
-                printf("Non-inheriting pages require a body.\n");
+                printf("Concrete pages require a body.\n");
                 return false;
             }
 
@@ -289,40 +373,13 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             }
         }
 
-        // NOTE(llw): Check title, icon, style sheets, scripts.
-
-        auto title = get_pointer(args, context.strings.title);
-        if(title != NULL) {
-            if(title->type != ARG_STRING) {
-                printf("Error: 'title' must be a string.\n");
-                return false;
-            }
+        if(    !validate_arg_type(context.strings.title, ARG_STRING, false)
+            || !validate_arg_type(context.strings.icon, ARG_STRING, false)
+            || !validate_arg_list(context.strings.style_sheets, ARG_STRING, false)
+            || !validate_arg_list(context.strings.scripts, ARG_STRING, false)
+        ) {
+            return false;
         }
-
-        auto icon = get_pointer(args, context.strings.icon);
-        if(icon != NULL) {
-            if(icon->type != ARG_STRING) {
-                printf("Error: 'icon' must be a string.\n");
-                return false;
-            }
-        }
-
-        auto style_sheets = get_pointer(args, context.strings.style_sheets);
-        if(style_sheets != NULL) {
-            if(!is_list_of(*style_sheets, ARG_STRING, NULL)) {
-                printf("Error: 'style_sheets' must be a list of strings.\n");
-                return false;
-            }
-        }
-
-        auto scripts = get_pointer(args, context.strings.scripts);
-        if(scripts != NULL) {
-            if(!is_list_of(*scripts, ARG_STRING, NULL)) {
-                printf("Error: 'scripts' must be a list of strings.\n");
-                return false;
-            }
-        }
-
     }
     // SUB div.
     else if(expr.type == context.strings.div) {
@@ -331,72 +388,41 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         auto name = get_pointer(args, context.strings.name);
         auto body = get_pointer(args, context.strings.body);
 
-        auto parameters = get_pointer(args, context.strings.parameters);
-
-        if(expr.parent && name != NULL) {
-            printf("Div definitions cannot be nested.\n");
-            return false;
-        }
-
-        // NOTE(llw): Reference.
-        if(type != NULL) {
-            use_arg(context.strings.type);
-
-            if(!is_string(type)) {
-                printf("Error: Div type must be a string.\n");
-                return false;
-            }
-
-            // NOTE(llw): Existence.
-            auto symbol = get_pointer(context.symbols[SYMBOL_DIV], type->value);
-            if(symbol == NULL) {
-                printf("Div does not exist.\n");
-                return false;
-            }
-
-            const auto &def = *symbol->expression;
-            auto parameters = get_pointer(def.arguments, context.strings.parameters);
-            if(parameters) {
-                const auto &list = parameters->list;
-                for(Usize i = 0; i < list.count; i += 1) {
-                    auto name = list[i].value;
-                    if(!has(args, name)) {
-                        printf("Parameter not provided.\n");
-                        return false;
-                    }
-
-                    use_arg(name);
-                }
-            }
-        }
         // NOTE(llw): Definition.
-        else if(name != NULL) {
+        if(name != NULL) {
             use_arg(context.strings.name);
             use_arg(context.strings.body);
             use_arg(context.strings.parameters);
 
-            if(parameters) {
-                if(!is_list_of(*parameters, ARG_ATOM, NULL)) {
-                    printf("Error: 'parameters' must be a list of atoms.\n");
-                    return false;
-                }
+            if(!validate_parameters()) {
+                return false;
+            }
+        }
+        // NOTE(llw): Reference.
+        else if(type != NULL) {
+            use_arg(context.strings.type);
+
+            if(!is_string(type)) {
+                printf("Error: 'type' must be a string.\n");
+                return false;
+            }
+
+            auto symbol_type = SYMBOL_DIV;
+            if(!validate_reference(type->value, symbol_type)) {
+                return false;
             }
         }
         // NOTE(llw): Instance.
         else if(body != NULL) {
             use_arg(context.strings.body);
 
-            if(parameters != NULL) {
-                printf("Div instances cannot have parameters.\n");
-                return false;
-            }
-
             if(!validate_body(*body, vc, full_id)) {
                 return false;
             }
         }
         else if(full_id == 0) {
-            printf("Warning: Empty div.\n");
+            printf("Error: Empty div.\n");
+            return false;
         }
     }
     // SUB text.
@@ -454,7 +480,8 @@ static bool validate(const Expression &expr, Validate_Context vc) {
 
         if(!has(used_args, name)) {
             auto string = context.string_table[name];
-            printf("Warning: Unused argument '%s'\n", string.values);
+            printf("Error: Unused argument '%s'\n", string.values);
+            return false;
         }
     }
 

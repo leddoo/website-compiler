@@ -2,6 +2,14 @@
 
 Context context;
 
+const char *argument_type_strings[ARG_LIST + 1] = {
+    "atom",
+    "string",
+    "number",
+    "block",
+    "list",
+};
+
 void setup_context() {
     context = {};
 
@@ -13,6 +21,8 @@ void setup_context() {
         context.symbols[i] = create_map<Interned_String, Symbol>(context.arena);
     }
     context.pages = { &context.arena };
+
+    context.strings.empty_string = intern(context.string_table, STRING(""));
 
     context.strings.dot    = intern(context.string_table, STRING("."));
     context.strings.comma  = intern(context.string_table, STRING(","));

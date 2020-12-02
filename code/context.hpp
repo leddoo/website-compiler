@@ -15,6 +15,7 @@ extern struct Context {
     String_Table string_table;
     struct {
         Interned_String
+            empty_string,
             dot, comma, colon,
             paren_open, paren_close,
             curly_open, curly_close,

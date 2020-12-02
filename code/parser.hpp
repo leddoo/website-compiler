@@ -15,6 +15,8 @@ enum Argument_Type {
     ARG_LIST,
 };
 
+extern const char *argument_type_strings[ARG_LIST + 1];
+
 struct Argument {
     union {
         Interned_String   value;
