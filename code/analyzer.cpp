@@ -3,23 +3,27 @@
 
 #include "stdio.h"
 
+Interned_String symbol_expr_types[SYMBOL_TYPE_COUNT];
 
 _inline bool is_definition(const Expression &expr) {
-    return has(expr.arguments, context.strings.name);
+    auto result = has(expr.arguments, context.strings.name);
+    return result;
 }
 
 _inline bool is_generic(const Expression &expr) {
-    return has(expr.arguments, context.strings.parameters);
+    auto result = has(expr.arguments, context.strings.parameters);
+    return result;
 }
 
-_inline bool is_page(const Expression &expr) {
-    return expr.type == context.strings.page;
+_inline bool is_symbol_type(const Expression &expr, Usize type) {
+    assert(type < SYMBOL_TYPE_COUNT);
+    auto result = expr.type == symbol_expr_types[type];
+    return result;
 }
 
-_inline bool is_concrete_page(const Expression &expr) {
-    return is_page(expr)
-        && !is_generic(expr)
-        && !has(expr.arguments, context.strings.inherits);
+_inline bool is_concrete(const Expression &expr) {
+    auto result = !is_generic(expr) && !has(expr.arguments, context.strings.type);
+    return result;
 }
 
 
@@ -30,7 +34,7 @@ struct Validate_Context {
 };
 
 static bool validate(Symbol &symbol);
-static Expression *instantiate_page(const Expression &page);
+static Expression *instantiate(const Expression &expr);
 
 
 bool analyze() {
@@ -82,19 +86,25 @@ bool analyze() {
         }
     }
 
-    // NOTE(llw): Instantiate pages.
-    for(Usize i = 0; i < context.symbols[SYMBOL_PAGE].count; i += 1) {
-        auto &symbol = context.symbols[SYMBOL_PAGE].entries[i].value;
+    // NOTE(llw): Instantiate non-generic symbols.
+    for(Usize type = 0; type < SYMBOL_TYPE_COUNT; type += 1) {
+        for(Usize i = 0; i < context.symbols[type].count; i += 1) {
 
-        if(!is_generic(*symbol.expression)) {
-            auto instance = instantiate_page(*symbol.expression);
+            auto &symbol = context.symbols[type].entries[i].value;
+            if(is_generic(*symbol.expression)) {
+                continue;
+            }
+
+            auto instance = instantiate(*symbol.expression);
             if(instance == NULL) {
                 return false;
             }
 
-            assert(is_concrete_page(*instance));
+            assert(is_symbol_type(*instance, type)
+                && is_concrete(*instance)
+            );
 
-            push(context.pages, instance);
+            push(context.exports[type], instance);
         }
     }
 
@@ -361,22 +371,22 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         }
 
         // NOTE(llw): Check inheritance.
-        auto inherits = get_pointer(args, context.strings.inherits);
-        if(inherits) {
-            use_arg(context.strings.inherits);
+        auto type = get_pointer(args, context.strings.type);
+        if(type) {
+            use_arg(context.strings.type);
 
-            if(inherits->type != ARG_STRING) {
-                printf("'inherits' requires a string.\n");
+            if(type->type != ARG_STRING) {
+                printf("'type' requires a string.\n");
                 return false;
             }
 
-            if(!validate_reference(inherits->value, SYMBOL_PAGE)) {
+            if(!validate_reference(type->value, SYMBOL_PAGE)) {
                 return false;
             }
         }
 
         // NOTE(llw): Check body.
-        if(is_concrete_page(expr)) {
+        if(is_concrete(expr)) {
             auto body = get_pointer(args, context.strings.body);
             if(body == NULL) {
                 printf("Concrete pages require a body.\n");
@@ -568,7 +578,9 @@ static bool validate(Symbol &symbol) {
     auto vc = Validate_Context {};
 
     auto id_table = create_map<Interned_String, int>(context.arena);
-    if(is_concrete_page(*symbol.expression)) {
+    if(    is_symbol_type(*symbol.expression, SYMBOL_PAGE)
+        && is_concrete(*symbol.expression)
+    ) {
         vc.id_table = &id_table;
         vc.id_prefix = context.strings.page;
     }
@@ -671,7 +683,7 @@ static bool insert_arguments(
 }
 
 // - Both reference and definition are modified!
-// - Remove parameter values, inherits/type from reference and insert into
+// - Remove parameter values, type from reference and insert into
 //   definition. Remove name and parameters from definition.
 // - Instantiate pages and references in definition.body (inherit arguments,
 //   outermost writer wins).
@@ -754,11 +766,11 @@ static bool instantiate(
     }
 
     // NOTE(llw): Recurse on pages.
-    auto inherits = get_pointer(args, context.strings.inherits);
-    if(    inherits != NULL
+    auto type = get_pointer(args, context.strings.type);
+    if(    type != NULL
         && definition.type == context.strings.page
     ) {
-        const auto &symbol = context.symbols[SYMBOL_PAGE][inherits->value];
+        const auto &symbol = context.symbols[SYMBOL_PAGE][type->value];
 
         // NOTE(llw): Instantiate.
         auto instance = duplicate(*symbol.expression, context.arena);
@@ -769,9 +781,9 @@ static bool instantiate(
         auto &inst_args = instance.arguments;
         auto &def_args = definition.arguments;
 
-        // NOTE(llw): Remove name/inherits.
+        // NOTE(llw): Remove name/type.
         remove(inst_args, context.strings.name);
-        remove(def_args, context.strings.inherits);
+        remove(def_args, context.strings.type);
 
         // NOTE(llw): Merge.
         for(Usize i = 0; i < inst_args.count; i += 1) {
@@ -797,9 +809,9 @@ static bool instantiate(
     return true;
 }
 
-static Expression *instantiate_page(const Expression &page) {
+static Expression *instantiate(const Expression &expr) {
     auto result = allocate<Expression>(context.arena);
-    *result = duplicate(page, context.arena);
+    *result = duplicate(expr, context.arena);
 
     if(!instantiate(NULL, *result)) {
         return NULL;

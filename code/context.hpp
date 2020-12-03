@@ -27,7 +27,7 @@ extern struct Context {
             page, title, icon, style_sheets, scripts,
             text, spacer, div,
             h1, p, span,
-            parameters, inherits,
+            parameters,
             form, form_field, form_submit,
             form_list, form_list_item,
             min, max, locked, initial,
@@ -44,7 +44,7 @@ extern struct Context {
     // Analyzer
     Map<Interned_String, Symbol> symbols[SYMBOL_TYPE_COUNT];
 
-    Array<Expression *> pages;
+    Array<Expression *> exports[SYMBOL_TYPE_COUNT];
 
 } context;
 

@@ -19,8 +19,8 @@ void setup_context() {
     context.expressions  = { &context.arena };
     for(Usize i = 0; i < SYMBOL_TYPE_COUNT; i += 1) {
         context.symbols[i] = create_map<Interned_String, Symbol>(context.arena);
+        context.exports[i] = { &context.arena };
     }
-    context.pages = { &context.arena };
 
     context.strings.empty_string = intern(context.string_table, STRING(""));
 
@@ -64,7 +64,6 @@ void setup_context() {
     strings.span = intern(table, STRING("span"));
 
     strings.parameters = intern(table, STRING("parameters"));
-    strings.inherits   = intern(table, STRING("inherits"));
 
     strings.form        = intern(table, STRING("form"));
     strings.form_field  = intern(table, STRING("form_field"));
@@ -98,6 +97,15 @@ void setup_context() {
     insert(context.valid_text_types, strings.h1, 0);
     insert(context.valid_text_types, strings.p, 0);
     insert(context.valid_text_types, strings.span, 0);
+
+
+    symbol_expr_types[SYMBOL_PAGE] = context.strings.page;
+    symbol_expr_types[SYMBOL_DIV] = context.strings.div;
+    symbol_expr_types[SYMBOL_FORM] = context.strings.form;
+
+    for(Usize i = 0; i < SYMBOL_TYPE_COUNT; i += 1) {
+        assert(symbol_expr_types[i] != 0);
+    }
 }
 
 

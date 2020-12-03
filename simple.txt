@@ -11,7 +11,7 @@
 
 (page
     name: "error",
-    inherits: "empty",
+    type: "empty",
     foo: { text type: "span", value: "foo" },
 )
 
@@ -27,7 +27,7 @@
 
 (page
     name: "template",
-    inherits: "root",
+    type: "root",
     parameters: [ content, bar ],
     title: "template",
     icon: "base_icon.ico",
@@ -44,7 +44,7 @@
 
 (page
     name: "reservierung",
-    inherits: "template",
+    type: "template",
     title: "Reservierung",
     style_sheets: [ "register.css" ],
     scripts: [ "register.js" ],

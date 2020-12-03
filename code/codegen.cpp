@@ -21,14 +21,14 @@ static void generate_html(
     Usize indent = 0
 );
 
-
 void codegen() {
 
     // NOTE(llw): Generate html for pages.
-    for(Usize i = 0; i < context.pages.count; i += 1) {
-        const auto &page = *context.pages[i];
+    for(Usize i = 0; i < context.exports[SYMBOL_PAGE].count; i += 1) {
+        const auto &page = *context.exports[SYMBOL_PAGE][i];
         auto name = page.arguments[context.strings.name].value;
         auto buffer = create_array<U8>(context.arena);
+        reserve(buffer, MEBI(1));
 
         generate_html(buffer, page);
 
@@ -194,18 +194,29 @@ static void generate_html(
         push(buffer, STRING("</form>\n"));
     }
     else if(expr.type == context.strings.form_field) {
+        auto title = args[context.strings.title].value;
+        auto type  = args[context.strings.type].value;
+
+        auto initial = get_pointer(args, context.strings.initial);
+
         push(buffer, STRING("<label for=\""));
         push(buffer, full_id);
         push(buffer, STRING("\">"));
-        push(buffer, args[context.strings.title].value);
+        push(buffer, title);
         push(buffer, STRING("</label>\n"));
 
         do_indent();
         push(buffer, STRING("<input"));
         push(buffer, id_string);
         push(buffer, STRING(" type=\""));
-        push(buffer, args[context.strings.type].value);
-        push(buffer, STRING("\">\n"));
+        push(buffer, type);
+        push(buffer, STRING("\""));
+        if(initial) {
+            push(buffer, STRING(" value=\""));
+            push(buffer, initial->value);
+            push(buffer, STRING("\""));
+        }
+        push(buffer, STRING(">\n"));
     }
     else if(expr.type == context.strings.text) {
         auto type  = args[context.strings.type].value;
