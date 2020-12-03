@@ -14,65 +14,35 @@ static void write_file(Interned_String name, String extension, const Array<U8> &
     write_entire_file((char *)path.values, buffer);
 }
 
-static void generate_html(
-    Array<U8> &buffer,
-    const Expression &expr,
-    Interned_String parent = 0,
-    Usize indent = 0
-);
+static Array<U8> generate_html(const Expression &page);
 
 void codegen() {
 
     // NOTE(llw): Generate html for pages.
     for(Usize i = 0; i < context.exports[SYMBOL_PAGE].count; i += 1) {
         const auto &page = *context.exports[SYMBOL_PAGE][i];
+
         auto name = page.arguments[context.strings.name].value;
-        auto buffer = create_array<U8>(context.arena);
-        reserve(buffer, MEBI(1));
-
-        generate_html(buffer, page);
-
-        write_file(name, STRING(".html"), buffer);
+        auto html = generate_html(page);
+        write_file(name, STRING(".html"), html);
     }
 }
 
 
-const String page_html_1 = STRING(
-    "<!DOCTYPE html>\n"
-    "<html lang=\"de\">\n"
-    "\n"
-    "<head>\n"
-    "    <meta charset=\"UTF-8\">\n"
-    "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
-    "    <meta http-equiv=\"X-UA-Compatible\" content=\"ie=edge\">\n"
-);
 
-const String page_html_2 = STRING(
-    "</head>\n"
-    "\n"
-    "<body>\n"
-);
-
-const String page_html_3 = STRING(
-    "</body>\n"
-    "\n"
-);
-
+static void do_indent(Array<U8> &buffer, Usize indent) {
+    for(Usize i = 0; i < indent; i += 1) {
+        push(buffer, STRING("    "));
+    }
+}
 
 static void generate_html(
-    Array<U8> &buffer,
     const Expression &expr,
     Interned_String parent,
-    Usize indent
+    Array<U8> &html, Usize html_indent,
+    Array<U8> &init_js, Usize init_js_indent
 ) {
     TEMP_SCOPE(context.temporary);
-
-    auto do_indent = [&](Usize offset = 0) {
-        for(Usize i = 0; i < indent + offset; i += 1) {
-            push(buffer, STRING("    "));
-        }
-    };
-
 
     const auto &args = expr.arguments;
 
@@ -98,100 +68,57 @@ static void generate_html(
         push(id_string, STRING(" id=\""));
         push(id_string, full_id);
         push(id_string, STRING("\""));
+
+        do_indent(init_js, init_js_indent);
+        push(init_js, STRING("window."));
+        push(init_js, full_id);
+        push(init_js, STRING(" = { dom: document.getElementById(\""));
+        push(init_js, full_id);
+        push(init_js, STRING("\") };\n"));
     }
 
 
-    do_indent();
-
-    if(expr.type == context.strings.page) {
-
-        push(buffer, page_html_1);
-        indent += 1;
-
-        auto title = get_pointer(args, context.strings.title);
-        if(title != NULL) {
-            do_indent();
-            push(buffer, STRING("<title>"));
-            push(buffer, title->value);
-            push(buffer, STRING("</title>\n"));
-        }
-
-        auto icon = get_pointer(args, context.strings.icon);
-        if(icon != NULL) {
-            do_indent();
-            push(buffer, STRING("<link rel=\"icon\" href=\""));
-            push(buffer, icon->value);
-            push(buffer, STRING("\">\n"));
-        }
-
-        auto style_sheets = get_pointer(args, context.strings.style_sheets);
-        if(style_sheets != NULL) {
-            const auto &list = style_sheets->list;
-            for(Usize i = 0; i < list.count; i += 1) {
-                do_indent();
-                push(buffer, STRING("<link rel=\"stylesheet\" href=\""));
-                push(buffer, list[i].value);
-                push(buffer, STRING("\">\n"));
-            }
-        }
-
-        auto scripts = get_pointer(args, context.strings.scripts);
-        if(scripts != NULL) {
-            const auto &list = scripts->list;
-            for(Usize i = 0; i < list.count; i += 1) {
-                do_indent();
-                push(buffer, STRING("<script src=\""));
-                push(buffer, list[i].value);
-                push(buffer, STRING("\"></script>\n"));
-            }
-        }
-
-        push(buffer, page_html_2);
-
-        do_indent();
-        push(buffer, STRING("<div id=\"page\">\n"));
-
-        const auto &children = args[context.strings.body].block;
-        for(Usize i = 0; i < children.count; i += 1) {
-            generate_html(buffer, children[i], context.strings.page, indent + 1);
-        }
-
-        do_indent();
-        push(buffer, STRING("</div>\n"));
-
-        push(buffer, page_html_3);
-    }
-    else if(expr.type == context.strings.div) {
-        push(buffer, STRING("<div"));
-        push(buffer, id_string);
-        push(buffer, STRING(">\n"));
+    if(expr.type == context.strings.div) {
+        do_indent(html, html_indent);
+        push(html, STRING("<div"));
+        push(html, id_string);
+        push(html, STRING(">\n"));
 
         auto body = get_pointer(args, context.strings.body);
         if(body != NULL) {
             const auto &children = body->block;
             for(Usize i = 0; i < children.count; i += 1) {
-                generate_html(buffer, children[i], parent, indent + 1);
+                generate_html(
+                    children[i], parent,
+                    html, html_indent + 1,
+                    init_js, init_js_indent
+                );
             }
         }
 
-        do_indent();
-        push(buffer, STRING("</div>\n"));
+        do_indent(html, html_indent);
+        push(html, STRING("</div>\n"));
     }
     else if(expr.type == context.strings.form) {
-        push(buffer, STRING("<form"));
-        push(buffer, id_string);
-        push(buffer, STRING(">\n"));
+        do_indent(html, html_indent);
+        push(html, STRING("<form"));
+        push(html, id_string);
+        push(html, STRING(">\n"));
 
         auto body = get_pointer(args, context.strings.body);
         if(body != NULL) {
             const auto &children = body->block;
             for(Usize i = 0; i < children.count; i += 1) {
-                generate_html(buffer, children[i], parent, indent + 1);
+                generate_html(
+                    children[i], parent,
+                    html, html_indent + 1,
+                    init_js, init_js_indent
+                );
             }
         }
 
-        do_indent();
-        push(buffer, STRING("</form>\n"));
+        do_indent(html, html_indent);
+        push(html, STRING("</form>\n"));
     }
     else if(expr.type == context.strings.form_field) {
         auto title = args[context.strings.title].value;
@@ -199,67 +126,165 @@ static void generate_html(
 
         auto initial = get_pointer(args, context.strings.initial);
 
-        push(buffer, STRING("<label for=\""));
-        push(buffer, full_id);
-        push(buffer, STRING("\">"));
-        push(buffer, title);
-        push(buffer, STRING("</label>\n"));
+        do_indent(html, html_indent);
+        push(html, STRING("<label for=\""));
+        push(html, full_id);
+        push(html, STRING("\">"));
+        push(html, title);
+        push(html, STRING("</label>\n"));
 
-        do_indent();
-        push(buffer, STRING("<input"));
-        push(buffer, id_string);
-        push(buffer, STRING(" type=\""));
-        push(buffer, type);
-        push(buffer, STRING("\""));
+        do_indent(html, html_indent);
+        push(html, STRING("<input"));
+        push(html, id_string);
+        push(html, STRING(" type=\""));
+        push(html, type);
+        push(html, STRING("\""));
         if(initial) {
-            push(buffer, STRING(" value=\""));
-            push(buffer, initial->value);
-            push(buffer, STRING("\""));
+            push(html, STRING(" value=\""));
+            push(html, initial->value);
+            push(html, STRING("\""));
         }
-        push(buffer, STRING(">\n"));
+        push(html, STRING(">\n"));
     }
     else if(expr.type == context.strings.text) {
         auto type  = args[context.strings.type].value;
         auto value = args[context.strings.value].value;
 
-        push(buffer, STRING("<"));
-        push(buffer, type);
-        push(buffer, id_string);
-        push(buffer, STRING(">\n"));
+        do_indent(html, html_indent);
+        push(html, STRING("<"));
+        push(html, type);
+        push(html, id_string);
+        push(html, STRING(">\n"));
 
-        do_indent(1);
-        push(buffer, value);
-        push(buffer, STRING("\n"));
+        do_indent(html, html_indent + 1);
+        push(html, value);
+        push(html, STRING("\n"));
 
-        do_indent();
-        push(buffer, STRING("</"));
-        push(buffer, type);
-        push(buffer, STRING(">\n"));
+        do_indent(html, html_indent);
+        push(html, STRING("</"));
+        push(html, type);
+        push(html, STRING(">\n"));
     }
     else if(expr.type == context.strings.spacer) {
         if(has(args, context.strings.value)) {
             auto value = args[context.strings.value].value;
 
-            push(buffer, STRING("<div style=\"spacer_"));
-            push(buffer, value);
-            push(buffer, STRING("\"></div>\n"));
+            do_indent(html, html_indent);
+            push(html, STRING("<div style=\"spacer_"));
+            push(html, value);
+            push(html, STRING("\"></div>\n"));
         }
         else {
             auto desktop = args[context.strings.desktop].value;
             auto mobile  = args[context.strings.mobile].value;
 
-            push(buffer, STRING("<div style=\"spacer_"));
-            push(buffer, desktop);
-            push(buffer, STRING(" desktop\"></div>\n"));
+            do_indent(html, html_indent);
+            push(html, STRING("<div style=\"spacer_"));
+            push(html, desktop);
+            push(html, STRING(" desktop\"></div>\n"));
 
-            do_indent();
-            push(buffer, STRING("<div style=\"spacer_"));
-            push(buffer, mobile);
-            push(buffer, STRING(" mobile\"></div>\n"));
+            do_indent(html, html_indent);
+            push(html, STRING("<div style=\"spacer_"));
+            push(html, mobile);
+            push(html, STRING(" mobile\"></div>\n"));
         }
     }
     else {
         assert(false);
     }
+}
+
+static Array<U8> generate_html(const Expression &page) {
+    assert(page.type == context.strings.page);
+
+    auto html = create_array<U8>(context.arena);
+    reserve(html, MEBI(1));
+
+    auto init_js = create_array<U8>(context.arena);
+    reserve(init_js, MEBI(1));
+
+    push(html, STRING(
+        "<!DOCTYPE html>\n"
+        "<html lang=\"de\">\n"
+        "\n"
+        "<head>\n"
+        "    <meta charset=\"UTF-8\">\n"
+        "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n"
+        "    <meta http-equiv=\"X-UA-Compatible\" content=\"ie=edge\">\n"
+    ));
+
+    auto title = get_pointer(page.arguments, context.strings.title);
+    if(title != NULL) {
+        do_indent(html, 1);
+        push(html, STRING("<title>"));
+        push(html, title->value);
+        push(html, STRING("</title>\n"));
+    }
+
+    auto icon = get_pointer(page.arguments, context.strings.icon);
+    if(icon != NULL) {
+        do_indent(html, 1);
+        push(html, STRING("<link rel=\"icon\" href=\""));
+        push(html, icon->value);
+        push(html, STRING("\">\n"));
+    }
+
+    auto style_sheets = get_pointer(page.arguments, context.strings.style_sheets);
+    if(style_sheets != NULL) {
+        const auto &list = style_sheets->list;
+        for(Usize i = 0; i < list.count; i += 1) {
+            do_indent(html, 1);
+            push(html, STRING("<link rel=\"stylesheet\" href=\""));
+            push(html, list[i].value);
+            push(html, STRING("\">\n"));
+        }
+    }
+
+    auto scripts = get_pointer(page.arguments, context.strings.scripts);
+    if(scripts != NULL) {
+        const auto &list = scripts->list;
+        for(Usize i = 0; i < list.count; i += 1) {
+            do_indent(html, 1);
+            push(html, STRING("<script src=\""));
+            push(html, list[i].value);
+            push(html, STRING("\"></script>\n"));
+        }
+    }
+
+    push(html, STRING(
+        "</head>\n"
+        "\n"
+        "<body>\n"
+        "    <div id=\"page\">\n"
+    ));
+
+    push(init_js, STRING(
+        "        window.page = { dom: document.getElementById(\"page\") };\n"
+    ));
+
+    const auto &children = page.arguments[context.strings.body].block;
+    for(Usize i = 0; i < children.count; i += 1) {
+        generate_html(
+            children[i],
+            context.strings.page,
+            html, 2,
+            init_js, 2
+        );
+    }
+
+    push(html, STRING(
+        "    </div>\n"
+        "    <script>\n"
+    ));
+    push(html, init_js);
+    push(html, STRING(
+        "    </script>\n"
+        "</body>\n"
+        "\n"
+        "</html>\n"
+        "\n"
+    ));
+
+    return html;
 }
 
