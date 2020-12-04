@@ -16,6 +16,12 @@ static void write_file(Interned_String name, String extension, const Array<U8> &
 
 static Array<U8> generate_html(const Expression &page);
 
+static void generate_instantiation_js(
+    const Expression &expr,
+    Array<U8> &buffer, Usize indent,
+    bool parent_is_tree_node
+);
+
 void codegen() {
 
     // NOTE(llw): Generate html for pages.
@@ -26,6 +32,48 @@ void codegen() {
         auto html = generate_html(page);
         write_file(name, STRING(".html"), html);
     }
+
+    // NOTE(llw): Generate instantiation js.
+    auto buffer = create_array<U8>(context.arena);
+    reserve(buffer, MEBI(1));
+
+    for(Usize type = 0; type < SYMBOL_TYPE_COUNT; type += 1) {
+        if(    type != SYMBOL_DIV
+            && type != SYMBOL_FORM
+        ) {
+            continue;
+        }
+
+        for(Usize i = 0; i < context.exports[type].count; i += 1) {
+            const auto &expr = *context.exports[type][i];
+
+            auto name = expr.arguments[context.strings.name].value;
+
+            push(buffer, STRING("function make_"));
+            push(buffer, name);
+            push(buffer, STRING("(parent) {\n"));
+
+            // TEMP(llw): This really is just a sanity check. You can only call
+            // make_* on tree nodes, which always have an id, unless there's a
+            // bug in the compiler.
+            push(buffer, STRING("    console.assert(parent.dom.id != \"\");\n\n"));
+
+            push(buffer, STRING("    let dom = parent.dom;\n"));
+            push(buffer, STRING("    let me  = parent;\n"));
+
+            push(buffer, STRING("\n    {\n"));
+            generate_instantiation_js(expr, buffer, 2, true);
+            push(buffer, STRING("    }\n"));
+
+            push(buffer, STRING("}\n\n"));
+        }
+    }
+
+    write_file(
+        intern(context.string_table, STRING("instantiate")),
+        STRING(".js"),
+        buffer
+    );
 }
 
 
@@ -35,6 +83,7 @@ static void do_indent(Array<U8> &buffer, Usize indent) {
         push(buffer, STRING("    "));
     }
 }
+
 
 static void generate_html(
     const Expression &expr,
@@ -286,5 +335,254 @@ static Array<U8> generate_html(const Expression &page) {
     ));
 
     return html;
+}
+
+
+static void generate_instantiation_js(
+    const Expression &expr,
+    Array<U8> &buffer, Usize indent,
+    bool parent_is_tree_node
+) {
+    const auto &args = expr.arguments;
+
+    auto lid = get_pointer(args, context.strings.id);
+    auto gid = get_pointer(args, context.strings.global_id);
+
+    auto id = Interned_String {};
+    {
+        if(lid != NULL) {
+            id = lid->value;
+        }
+        else if(gid != NULL) {
+            id = gid->value;
+        }
+    }
+
+
+    auto begin_element = [&]() {
+        push(buffer, STRING("\n"));
+        do_indent(buffer, indent);
+        push(buffer, STRING("{\n"));
+        indent += 1;
+    };
+
+    auto end_element = [&]() {
+        indent -= 1;
+        do_indent(buffer, indent);
+        push(buffer, STRING("}\n"));
+    };
+
+    auto write_parent_variables = [&]() {
+        do_indent(buffer, indent);
+        push(buffer, STRING("let my_dom_parent = dom;\n"));
+
+        do_indent(buffer, indent);
+        if(gid != NULL) {
+            push(buffer, STRING("let my_tree_parent = window.page;\n"));
+        }
+        else if(parent_is_tree_node) {
+            push(buffer, STRING("let my_tree_parent = me;\n"));
+        }
+        else {
+            push(buffer, STRING("// same tree parent.\n"));
+        }
+
+        if(id != 0) {
+            push(buffer, STRING("\n"));
+
+            do_indent(buffer, indent);
+            push(buffer, STRING("console.assert(my_tree_parent[\""));
+            push(buffer, id);
+            push(buffer, STRING("\"] === undefined);\n"));
+
+            do_indent(buffer, indent);
+            push(buffer, STRING("let full_id = my_tree_parent.dom.id + \"."));
+            push(buffer, id);
+            push(buffer, STRING("\";\n"));
+        }
+    };
+
+    auto write_create_dom = [&](String type, bool takes_id) {
+        push(buffer, STRING("\n"));
+
+        do_indent(buffer, indent);
+        push(buffer, STRING("let dom = document.createElement(\""));
+        push(buffer, type);
+        push(buffer, STRING("\");\n"));
+
+        do_indent(buffer, indent);
+        push(buffer, STRING("my_dom_parent.append(dom);\n"));
+
+        if(takes_id && id != 0) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("dom.id = full_id;\n"));
+        }
+    };
+
+    auto write_create_tree_node = [&]() {
+        push(buffer, STRING("\n"));
+
+        if(id != 0) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("let me = {};\n"));
+
+            do_indent(buffer, indent);
+            push(buffer, STRING("my_tree_parent[\""));
+            push(buffer, id);
+            push(buffer, STRING("\"] = me;\n"));
+
+            do_indent(buffer, indent);
+            push(buffer, STRING("me.dom = dom;\n"));
+        }
+        else {
+            do_indent(buffer, indent);
+            push(buffer, STRING("// no tree node.\n"));
+        }
+    };
+
+    auto write_body = [&]() {
+        auto body = get_pointer(args, context.strings.body);
+        if(body != NULL) {
+            assert(expr.type == context.strings.div
+                || expr.type == context.strings.form
+            );
+
+            const auto &children = body->block;
+            for(Usize i = 0; i < children.count; i += 1) {
+                begin_element();
+                generate_instantiation_js(
+                    children[i],
+                    buffer, indent,
+                    id != 0
+                );
+                end_element();
+            }
+        }
+    };
+
+    auto write_simple_element = [&](String type) {
+        write_parent_variables();
+        write_create_dom(type, true);
+        write_create_tree_node();
+        write_body();
+    };
+
+
+    if(expr.type == context.strings.div) {
+        write_simple_element(STRING("div"));
+    }
+    else if(expr.type == context.strings.form) {
+        write_simple_element(STRING("form"));
+    }
+    else if(expr.type == context.strings.form_field) {
+        auto title = args[context.strings.title].value;
+        auto type  = args[context.strings.type].value;
+
+        auto initial = get_pointer(args, context.strings.initial);
+
+        write_parent_variables();
+
+        begin_element();
+        {
+            write_create_dom(STRING("label"), false);
+
+            do_indent(buffer, indent);
+            push(buffer, STRING("dom.htmlFor = full_id\n"));
+
+            do_indent(buffer, indent);
+            push(buffer, STRING("dom.innerHTML = \""));
+            push(buffer, title);
+            push(buffer, STRING("\"\n"));
+        }
+        end_element();
+
+        begin_element();
+        {
+            write_create_dom(STRING("input"), true);
+
+            do_indent(buffer, indent);
+            push(buffer, STRING("dom.type = \""));
+            push(buffer, type);
+            push(buffer, STRING("\";\n"));
+
+            if(initial != NULL) {
+                do_indent(buffer, indent);
+                push(buffer, STRING("dom.value = \""));
+                push(buffer, initial->value);
+                push(buffer, STRING("\";\n"));
+            }
+
+            write_create_tree_node();
+        }
+        end_element();
+    }
+    else if(expr.type == context.strings.text) {
+        auto type  = args[context.strings.type].value;
+        auto value = args[context.strings.value].value;
+
+        write_parent_variables();
+        write_create_dom(context.string_table[type], true);
+
+        do_indent(buffer, indent);
+        push(buffer, STRING("dom.innerHTML = \""));
+        push(buffer, value);
+        push(buffer, STRING("\";\n"));
+
+        write_create_tree_node();
+    }
+    else if(expr.type == context.strings.spacer) {
+        write_parent_variables();
+
+        if(has(args, context.strings.value)) {
+            auto value = args[context.strings.value].value;
+
+            begin_element();
+            {
+                write_create_dom(STRING("div"), true);
+
+                do_indent(buffer, indent);
+                push(buffer, STRING("dom.classList.add(\"spacer_"));
+                push(buffer, value);
+                push(buffer, STRING("\");\n"));
+            }
+            end_element();
+        }
+        else {
+            auto desktop = args[context.strings.desktop].value;
+            auto mobile  = args[context.strings.mobile].value;
+
+            begin_element();
+            {
+                write_create_dom(STRING("div"), true);
+
+                do_indent(buffer, indent);
+                push(buffer, STRING("dom.classList.add(\"desktop\");\n"));
+
+                do_indent(buffer, indent);
+                push(buffer, STRING("dom.classList.add(\"spacer_"));
+                push(buffer, desktop);
+                push(buffer, STRING("\");\n"));
+            }
+            end_element();
+
+            begin_element();
+            {
+                write_create_dom(STRING("div"), true);
+
+                do_indent(buffer, indent);
+                push(buffer, STRING("dom.classList.add(\"mobile\");\n"));
+
+                do_indent(buffer, indent);
+                push(buffer, STRING("dom.classList.add(\"spacer_"));
+                push(buffer, mobile);
+                push(buffer, STRING("\");\n"));
+            }
+            end_element();
+        }
+    }
+    else {
+        assert(false);
+    }
+
 }
 

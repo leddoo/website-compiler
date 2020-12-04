@@ -101,6 +101,11 @@
                 text type: "span", value: "hi"
             },
         )
+        div global_id: "yay"
+
+        text id: "foo", type: "h1", value: "Title"
+        spacer desktop: 4, mobile: 3
+        spacer value: 1
     },
 )
 

@@ -498,7 +498,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             }
         }
 
-        if(name == NULL && type == NULL && body == NULL && full_id == 0) {
+        if(name == NULL && type == NULL && body == NULL && !has_id) {
             printf("Error: Empty %s.\n", context.string_table[expr.type].values);
             return false;
         }
