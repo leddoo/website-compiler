@@ -26,6 +26,26 @@ _inline bool is_concrete(const Expression &expr) {
     return result;
 }
 
+_inline bool is_identifier(String string) {
+    if(string.size < 1) {
+        return false;
+    }
+
+    auto first = string.values[0];
+    if(!is_alpha(first) && first != '_') {
+        return false;
+    }
+
+    for(Usize i = 1; i < string.size; i += 1) {
+        auto at = string.values[i];
+        if(!is_alpha(at) && !is_numeric(at) && at != '_') {
+            return false;
+        }
+    }
+
+    return true;
+}
+
 
 struct Validate_Context {
     Map<Interned_String, int> *id_table;
@@ -50,6 +70,10 @@ bool analyze() {
         }
         if(name->type != ARG_STRING) {
             printf("Names must be strings.\n");
+            return false;
+        }
+        if(!is_identifier(context.string_table[name->value])) {
+            printf("Names must be identifiers.\n");
             return false;
         }
 
@@ -319,11 +343,21 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         printf("Ids must be strings.\n");
         return false;
     }
-    if(    lid != NULL && lid->value == context.strings.empty_string
-        || gid != NULL && gid->value == context.strings.empty_string
-    ) {
-        printf("Ids must not be empty strings.\n");
-        return false;
+
+    // NOTE(llw): Check id is identifer.
+    if(has_id) {
+        Interned_String partial_id;
+        if(lid != NULL) {
+            partial_id = lid->value;
+        }
+        else {
+            partial_id = gid->value;
+        }
+
+        if(!is_identifier(context.string_table[partial_id])) {
+            printf("Ids must be identifiers.\n");
+            return false;
+        }
     }
 
     // NOTE(llw): Check id uniqueness.
@@ -434,8 +468,9 @@ static bool validate(const Expression &expr, Validate_Context vc) {
                 return false;
             }
         }
+
         // NOTE(llw): Reference.
-        else if(type != NULL) {
+        if(type != NULL) {
             use_arg(context.strings.type);
 
             if(!is_string(type)) {
@@ -455,13 +490,15 @@ static bool validate(const Expression &expr, Validate_Context vc) {
                 return false;
             }
         }
+
         // NOTE(llw): Instance.
-        else if(body != NULL) {
+        if(is_concrete(expr) && body != NULL) {
             if(!validate_body(*body, vc, full_id)) {
                 return false;
             }
         }
-        else if(full_id == 0) {
+
+        if(name == NULL && type == NULL && body == NULL && full_id == 0) {
             printf("Error: Empty %s.\n", context.string_table[expr.type].values);
             return false;
         }
@@ -473,7 +510,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             return false;
         }
 
-        if(!full_id) {
+        if(!has_id) {
             printf("Error: form_field requires an id.\n");
             return false;
         }

@@ -70,7 +70,7 @@
 )
 
 (form
-    name: "yay, forms",
+    name: "yay_forms",
     body: {
         (form_field
             title: "Name",
@@ -91,13 +91,26 @@
     },
 )
 
+(div
+    name: "instantiate_me",
+    body: {
+        (div
+            id: "hey_man",
+            type: "wrapper",
+            expression: {
+                text type: "span", value: "hi"
+            },
+        )
+    },
+)
+
 (page
     name: "forms",
     body: {
         div id: "test", type: "wrapper", expression: { div body: { div id: "hi" } }
         div type: "wrapper", expression: {}, body: {}
 
-        form type: "yay, forms"
+        form type: "yay_forms"
     },
 )
 
