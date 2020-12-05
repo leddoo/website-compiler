@@ -3,8 +3,6 @@
 
 #include "stdio.h"
 
-Interned_String symbol_expr_types[SYMBOL_TYPE_COUNT];
-
 _inline bool is_definition(const Expression &expr) {
     auto result = has(expr.arguments, context.strings.name);
     return result;
@@ -12,12 +10,6 @@ _inline bool is_definition(const Expression &expr) {
 
 _inline bool is_generic(const Expression &expr) {
     auto result = has(expr.arguments, context.strings.parameters);
-    return result;
-}
-
-_inline bool is_symbol_type(const Expression &expr, Usize type) {
-    assert(type < SYMBOL_TYPE_COUNT);
-    auto result = expr.type == symbol_expr_types[type];
     return result;
 }
 
@@ -77,59 +69,37 @@ bool analyze() {
             return false;
         }
 
-        auto type = Symbol_Type {};
-        if(expr.type == context.strings.page) {
-            type = SYMBOL_PAGE;
-        }
-        else if(expr.type == context.strings.div) {
-            type = SYMBOL_DIV;
-        }
-        else if(expr.type == context.strings.form) {
-            type = SYMBOL_FORM;
-        }
-        else {
-            printf("Unrecognized definition type.\n");
-            return false;
-        }
-
         auto symbol = Symbol {};
         symbol.expression = &expr;
-        if(!insert_maybe(context.symbols[type], name->value, symbol)) {
+        if(!insert_maybe(context.symbols, name->value, symbol)) {
             printf("Multiple definitions.\n");
             return false;
         }
     }
 
     // NOTE(llw): Validate.
-    for(Usize type = 0; type < SYMBOL_TYPE_COUNT; type += 1) {
-        auto &symbols = context.symbols[type];
-        for(Usize i = 0; i < symbols.count; i += 1) {
-            if(!validate(symbols.entries[i].value)) {
-                return false;
-            }
+    for(Usize i = 0; i < context.symbols.count; i += 1) {
+        if(!validate(context.symbols.entries[i].value)) {
+            return false;
         }
     }
 
     // NOTE(llw): Instantiate non-generic symbols.
-    for(Usize type = 0; type < SYMBOL_TYPE_COUNT; type += 1) {
-        for(Usize i = 0; i < context.symbols[type].count; i += 1) {
+    for(Usize i = 0; i < context.symbols.count; i += 1) {
 
-            auto &symbol = context.symbols[type].entries[i].value;
-            if(is_generic(*symbol.expression)) {
-                continue;
-            }
-
-            auto instance = instantiate(*symbol.expression);
-            if(instance == NULL) {
-                return false;
-            }
-
-            assert(is_symbol_type(*instance, type)
-                && is_concrete(*instance)
-            );
-
-            push(context.exports[type], instance);
+        auto &symbol = context.symbols.entries[i].value;
+        if(is_generic(*symbol.expression)) {
+            continue;
         }
+
+        auto instance = instantiate(*symbol.expression);
+        if(instance == NULL) {
+            return false;
+        }
+
+        assert(is_concrete(*instance));
+
+        push(context.exports, instance);
     }
 
     return true;
@@ -270,9 +240,9 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         return true;
     };
 
-    auto validate_reference = [&](Interned_String name, Symbol_Type type) {
+    auto validate_reference = [&](Interned_String name) {
         // NOTE(llw): Existence.
-        auto symbol = get_pointer(context.symbols[type], name);
+        auto symbol = get_pointer(context.symbols, name);
         if(symbol == NULL) {
             printf("Referenced symbol does not exist.\n");
             return false;
@@ -414,7 +384,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
                 return false;
             }
 
-            if(!validate_reference(type->value, SYMBOL_PAGE)) {
+            if(!validate_reference(type->value)) {
                 return false;
             }
         }
@@ -478,15 +448,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
                 return false;
             }
 
-            auto symbol_type = SYMBOL_DIV;
-            if(expr.type == context.strings.form) {
-                symbol_type = SYMBOL_FORM;
-            }
-            else {
-                assert(expr.type == context.strings.div);
-            }
-
-            if(!validate_reference(type->value, symbol_type)) {
+            if(!validate_reference(type->value)) {
                 return false;
             }
         }
@@ -615,7 +577,7 @@ static bool validate(Symbol &symbol) {
     auto vc = Validate_Context {};
 
     auto id_table = create_map<Interned_String, int>(context.arena);
-    if(    is_symbol_type(*symbol.expression, SYMBOL_PAGE)
+    if(    symbol.expression->type == context.strings.page
         && is_concrete(*symbol.expression)
     ) {
         vc.id_table = &id_table;
@@ -771,15 +733,7 @@ static bool instantiate(
                    expr.type == context.strings.div
                 || expr.type == context.strings.form
             )) {
-                auto symbol_type = SYMBOL_DIV;
-                if(expr.type == context.strings.form) {
-                    symbol_type = SYMBOL_FORM;
-                }
-                else {
-                    assert(expr.type == context.strings.div);
-                }
-
-                auto symbol = context.symbols[symbol_type][type->value];
+                auto symbol = context.symbols[type->value];
                 auto instance = duplicate(*symbol.expression, context.arena);
                 if(!instantiate(&expr, instance)) {
                     return false;
@@ -807,7 +761,7 @@ static bool instantiate(
     if(    type != NULL
         && definition.type == context.strings.page
     ) {
-        const auto &symbol = context.symbols[SYMBOL_PAGE][type->value];
+        const auto &symbol = context.symbols[type->value];
 
         // NOTE(llw): Instantiate.
         auto instance = duplicate(*symbol.expression, context.arena);

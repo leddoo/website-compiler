@@ -42,9 +42,9 @@ extern struct Context {
     Array<Expression> expressions;
 
     // Analyzer
-    Map<Interned_String, Symbol> symbols[SYMBOL_TYPE_COUNT];
+    Map<Interned_String, Symbol> symbols;
 
-    Array<Expression *> exports[SYMBOL_TYPE_COUNT];
+    Array<Expression *> exports;
 
 } context;
 

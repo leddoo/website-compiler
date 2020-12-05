@@ -7,16 +7,6 @@
 bool analyze();
 
 
-enum Symbol_Type {
-    SYMBOL_PAGE,
-    SYMBOL_DIV,
-    SYMBOL_FORM,
-
-    SYMBOL_TYPE_COUNT,
-};
-
-extern Interned_String symbol_expr_types[SYMBOL_TYPE_COUNT];
-
 enum Symbol_State {
     SYMS_DISCOVERED,
     SYMS_PROCESSING,

@@ -24,55 +24,42 @@ static void generate_instantiation_js(
 
 void codegen() {
 
-    // NOTE(llw): Generate html for pages.
-    for(Usize i = 0; i < context.exports[SYMBOL_PAGE].count; i += 1) {
-        const auto &page = *context.exports[SYMBOL_PAGE][i];
+    auto instantiate_js = create_array<U8>(context.arena);
+    reserve(instantiate_js, MEBI(1));
 
-        auto name = page.arguments[context.strings.name].value;
-        auto html = generate_html(page);
-        write_file(name, STRING(".html"), html);
-    }
+    for(Usize i = 0; i < context.exports.count; i += 1) {
+        const auto &expr = *context.exports[i];
+        auto name = expr.arguments[context.strings.name].value;
 
-    // NOTE(llw): Generate instantiation js.
-    auto buffer = create_array<U8>(context.arena);
-    reserve(buffer, MEBI(1));
-
-    for(Usize type = 0; type < SYMBOL_TYPE_COUNT; type += 1) {
-        if(    type != SYMBOL_DIV
-            && type != SYMBOL_FORM
-        ) {
-            continue;
+        if(expr.type == context.strings.page) {
+            auto html = generate_html(expr);
+            write_file(name, STRING(".html"), html);
         }
-
-        for(Usize i = 0; i < context.exports[type].count; i += 1) {
-            const auto &expr = *context.exports[type][i];
-
-            auto name = expr.arguments[context.strings.name].value;
-
-            push(buffer, STRING("function make_"));
-            push(buffer, name);
-            push(buffer, STRING("(parent) {\n"));
+        else {
+            push(instantiate_js, STRING("function make_"));
+            push(instantiate_js, name);
+            push(instantiate_js, STRING("(parent) {\n"));
 
             // TEMP(llw): This really is just a sanity check. You can only call
             // make_* on tree nodes, which always have an id, unless there's a
             // bug in the compiler.
-            push(buffer, STRING("    console.assert(parent.dom.id != \"\");\n\n"));
+            push(instantiate_js, STRING("    console.assert(parent.dom.id != \"\");\n\n"));
 
-            push(buffer, STRING("    let dom = parent.dom;\n"));
-            push(buffer, STRING("    let me  = parent;\n"));
+            push(instantiate_js, STRING("    let dom = parent.dom;\n"));
+            push(instantiate_js, STRING("    let me  = parent;\n"));
 
-            push(buffer, STRING("\n    {\n"));
-            generate_instantiation_js(expr, buffer, 2, true);
-            push(buffer, STRING("    }\n"));
+            push(instantiate_js, STRING("\n    {\n"));
+            generate_instantiation_js(expr, instantiate_js, 2, true);
+            push(instantiate_js, STRING("    }\n"));
 
-            push(buffer, STRING("}\n\n"));
+            push(instantiate_js, STRING("}\n\n"));
         }
     }
 
     write_file(
         intern(context.string_table, STRING("instantiate")),
         STRING(".js"),
-        buffer
+        instantiate_js
     );
 }
 
