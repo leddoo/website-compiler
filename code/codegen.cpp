@@ -29,15 +29,15 @@ void codegen() {
 
     for(Usize i = 0; i < context.exports.count; i += 1) {
         const auto &expr = *context.exports[i];
-        auto name = expr.arguments[context.strings.name].value;
+        auto defines = expr.arguments[context.strings.defines].value;
 
         if(expr.type == context.strings.page) {
             auto html = generate_html(expr);
-            write_file(name, STRING(".html"), html);
+            write_file(defines, STRING(".html"), html);
         }
         else {
             push(instantiate_js, STRING("function make_"));
-            push(instantiate_js, name);
+            push(instantiate_js, defines);
             push(instantiate_js, STRING("(parent) {\n"));
 
             // TEMP(llw): This really is just a sanity check. You can only call

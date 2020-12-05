@@ -4,7 +4,7 @@
 #include "stdio.h"
 
 _inline bool is_definition(const Expression &expr) {
-    auto result = has(expr.arguments, context.strings.name);
+    auto result = has(expr.arguments, context.strings.defines);
     return result;
 }
 
@@ -14,7 +14,7 @@ _inline bool is_generic(const Expression &expr) {
 }
 
 _inline bool is_concrete(const Expression &expr) {
-    auto result = !is_generic(expr) && !has(expr.arguments, context.strings.type);
+    auto result = !is_generic(expr) && !has(expr.arguments, context.strings.inherits);
     return result;
 }
 
@@ -55,23 +55,23 @@ bool analyze() {
     for(Usize i = 0; i < context.expressions.count; i += 1) {
         auto &expr = context.expressions[i];
 
-        auto name = get_pointer(expr.arguments, context.strings.name);
-        if(name == NULL) {
-            printf("Definitions require names.\n");
+        auto defines = get_pointer(expr.arguments, context.strings.defines);
+        if(defines == NULL) {
+            printf("Not a definition.\n");
             return false;
         }
-        if(name->type != ARG_STRING) {
-            printf("Names must be strings.\n");
+        if(defines->type != ARG_STRING) {
+            printf("Definition names must be strings.\n");
             return false;
         }
-        if(!is_identifier(context.string_table[name->value])) {
-            printf("Names must be identifiers.\n");
+        if(!is_identifier(context.string_table[defines->value])) {
+            printf("Definition names must be identifiers.\n");
             return false;
         }
 
         auto symbol = Symbol {};
         symbol.expression = &expr;
-        if(!insert_maybe(context.symbols, name->value, symbol)) {
+        if(!insert_maybe(context.symbols, defines->value, symbol)) {
             printf("Multiple definitions.\n");
             return false;
         }
@@ -356,7 +356,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
 
     // SUB page.
     if(expr.type == context.strings.page) {
-        use_arg(context.strings.name);
+        use_arg(context.strings.defines);
         use_arg(context.strings.body);
 
         if(expr.parent != NULL) {
@@ -375,16 +375,16 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         }
 
         // NOTE(llw): Check inheritance.
-        auto type = get_pointer(args, context.strings.type);
-        if(type) {
-            use_arg(context.strings.type);
+        auto inherits = get_pointer(args, context.strings.inherits);
+        if(inherits) {
+            use_arg(context.strings.inherits);
 
-            if(type->type != ARG_STRING) {
-                printf("'type' requires a string.\n");
+            if(inherits->type != ARG_STRING) {
+                printf("'inherits' requires a string.\n");
                 return false;
             }
 
-            if(!validate_reference(type->value)) {
+            if(!validate_reference(inherits->value)) {
                 return false;
             }
         }
@@ -424,14 +424,14 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             vc.in_form = true;
         }
 
-        auto type = get_pointer(args, context.strings.type);
+        auto inherits = get_pointer(args, context.strings.inherits);
 
-        auto name = get_pointer(args, context.strings.name);
+        auto name = get_pointer(args, context.strings.defines);
         auto body = get_pointer(args, context.strings.body);
 
         // NOTE(llw): Definition.
         if(name != NULL) {
-            use_arg(context.strings.name);
+            use_arg(context.strings.defines);
             use_arg(context.strings.parameters);
 
             if(!validate_parameters()) {
@@ -440,15 +440,15 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         }
 
         // NOTE(llw): Reference.
-        if(type != NULL) {
-            use_arg(context.strings.type);
+        if(inherits != NULL) {
+            use_arg(context.strings.inherits);
 
-            if(!is_string(type)) {
-                printf("Error: 'type' must be a string.\n");
+            if(!is_string(inherits)) {
+                printf("Error: 'inherits' must be a string.\n");
                 return false;
             }
 
-            if(!validate_reference(type->value)) {
+            if(!validate_reference(inherits->value)) {
                 return false;
             }
         }
@@ -460,7 +460,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             }
         }
 
-        if(name == NULL && type == NULL && body == NULL && !has_id) {
+        if(name == NULL && inherits == NULL && body == NULL && !has_id) {
             printf("Error: Empty %s.\n", context.string_table[expr.type].values);
             return false;
         }
@@ -682,7 +682,7 @@ static bool insert_arguments(
 }
 
 // - Both reference and definition are modified!
-// - Remove parameter values, type from reference and insert into
+// - Remove parameter values, inherits from reference and insert into
 //   definition. Remove name and parameters from definition.
 // - Instantiate pages and references in definition.body (inherit arguments,
 //   outermost writer wins).
@@ -728,12 +728,12 @@ static bool instantiate(
         for(Usize expr_index = 0; expr_index < block.count; expr_index += 1) {
             auto &expr = block[expr_index];
 
-            auto type = get_pointer(expr.arguments, context.strings.type);
-            if(type != 0 && (
+            auto inherits = get_pointer(expr.arguments, context.strings.inherits);
+            if(inherits != 0 && (
                    expr.type == context.strings.div
                 || expr.type == context.strings.form
             )) {
-                auto symbol = context.symbols[type->value];
+                auto symbol = context.symbols[inherits->value];
                 auto instance = duplicate(*symbol.expression, context.arena);
                 if(!instantiate(&expr, instance)) {
                     return false;
@@ -742,9 +742,9 @@ static bool instantiate(
                 auto &inst_args = instance.arguments;
                 auto &def_args  = expr.arguments;
 
-                // NOTE(llw): Remove name/type.
-                remove(inst_args, context.strings.name);
-                remove(def_args, context.strings.type);
+                // NOTE(llw): Remove name/inherits.
+                remove(inst_args, context.strings.defines);
+                remove(def_args, context.strings.inherits);
 
                 // NOTE(llw): Merge.
                 for(Usize i = 0; i < inst_args.count; i += 1) {
@@ -757,11 +757,11 @@ static bool instantiate(
     }
 
     // NOTE(llw): Recurse on pages.
-    auto type = get_pointer(args, context.strings.type);
-    if(    type != NULL
+    auto inherits = get_pointer(args, context.strings.inherits);
+    if(    inherits != NULL
         && definition.type == context.strings.page
     ) {
-        const auto &symbol = context.symbols[type->value];
+        const auto &symbol = context.symbols[inherits->value];
 
         // NOTE(llw): Instantiate.
         auto instance = duplicate(*symbol.expression, context.arena);
@@ -772,9 +772,9 @@ static bool instantiate(
         auto &inst_args = instance.arguments;
         auto &def_args = definition.arguments;
 
-        // NOTE(llw): Remove name/type.
-        remove(inst_args, context.strings.name);
-        remove(def_args, context.strings.type);
+        // NOTE(llw): Remove name/inherits.
+        remove(inst_args, context.strings.defines);
+        remove(def_args, context.strings.inherits);
 
         // NOTE(llw): Merge.
         for(Usize i = 0; i < inst_args.count; i += 1) {

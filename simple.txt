@@ -1,22 +1,22 @@
 (page
-    name: "simple",
+    defines: "simple",
     body: {},
 )
 
 (page
-    name: "empty",
+    defines: "empty",
     body: { foo },
     parameters: [ foo ],
 )
 
 (page
-    name: "error",
-    type: "empty",
+    defines: "error",
+    inherits: "empty",
     foo: { text type: "span", value: "foo" },
 )
 
 (page
-    name: "root",
+    defines: "root",
     parameters: [ content, foo ],
     body: {
         content
@@ -26,8 +26,8 @@
 )
 
 (page
-    name: "template",
-    type: "root",
+    defines: "template",
+    inherits: "root",
     parameters: [ content, bar ],
     title: "template",
     icon: "base_icon.ico",
@@ -43,8 +43,8 @@
 )
 
 (page
-    name: "reservierung",
-    type: "template",
+    defines: "reservierung",
+    inherits: "template",
     title: "Reservierung",
     style_sheets: [ "register.css" ],
     scripts: [ "register.js" ],
@@ -62,7 +62,7 @@
 
 
 (div
-    name: "wrapper",
+    defines: "wrapper",
     parameters: [ expression ],
     body: {
         expression
@@ -70,7 +70,7 @@
 )
 
 (form
-    name: "yay_forms",
+    defines: "yay_forms",
     body: {
         (form_field
             title: "Name",
@@ -92,11 +92,11 @@
 )
 
 (div
-    name: "instantiate_me",
+    defines: "instantiate_me",
     body: {
         (div
             id: "hey_man",
-            type: "wrapper",
+            inherits: "wrapper",
             expression: {
                 text type: "span", value: "hi"
             },
@@ -110,12 +110,12 @@
 )
 
 (page
-    name: "forms",
+    defines: "forms",
     body: {
-        div id: "test", type: "wrapper", expression: { div body: { div id: "hi" } }
-        div type: "wrapper", expression: {}, body: {}
+        div id: "test", inherits: "wrapper", expression: { div body: { div id: "hi" } }
+        div inherits: "wrapper", expression: {}, body: {}
 
-        form type: "yay_forms"
+        form inherits: "yay_forms"
     },
 )
 
