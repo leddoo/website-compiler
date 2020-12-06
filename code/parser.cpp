@@ -257,6 +257,27 @@ Expression parse_expression(Reader<Token> &reader) {
 
     auto t0 = *reader.current;
 
+    // NOTE(llw): String as short hand for: text value: "..."
+    if(t0.type == TOKEN_STRING) {
+        reader.current += 1;
+
+        auto value = Argument {};
+        value.type = ARG_STRING;
+        value.value = t0.string;
+
+        auto args = create_map<Interned_String, Argument>(context.arena, 1);
+        insert(args, context.strings.value, value);
+
+        context.next_expression_id += 1;
+        auto own_id = context.next_expression_id;
+
+        auto result = Expression {};
+        result.id = own_id;
+        result.type = context.strings.text;
+        result.arguments = args;
+        return result;
+    }
+
     auto is_multi_line = false;
     auto type = t0.string;
 

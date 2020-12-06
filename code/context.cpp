@@ -91,10 +91,10 @@ void setup_context() {
         assert(insert_maybe(set, id, 0));
     }
 
-    context.valid_text_types.allocator = &context.arena;
-    insert(context.valid_text_types, strings.h1, 0);
-    insert(context.valid_text_types, strings.p, 0);
-    insert(context.valid_text_types, strings.span, 0);
+    context.simple_types.allocator = &context.arena;
+    insert(context.simple_types, strings.h1, 0);
+    insert(context.simple_types, strings.p, 0);
+    insert(context.simple_types, strings.span, 0);
 }
 
 

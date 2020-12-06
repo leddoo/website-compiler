@@ -12,7 +12,7 @@
 (page
     defines: "error",
     inherits: "empty",
-    foo: { text type: "span", value: "foo" },
+    foo: { span body: { "foo" } },
 )
 
 (page
@@ -20,8 +20,8 @@
     parameters: [ content, foo ],
     body: {
         content
-        text type: "h1", value: "finally"
-        text type: "span", value: foo
+        h1 body: { "finally" }
+        span body: { foo }
     },
 )
 
@@ -34,12 +34,12 @@
     style_sheets: [ "main.css" ],
     scripts: [ "main.js" ],
     content: {
-        text type: "h1", value: "header"
+        h1 body: { "header" }
         content
-        text type: "h1", value: "footer"
+        h1 body: { "footer" }
         bar
     },
-    foo: "foo as text",
+    foo: { "foo as text" },
 )
 
 (page
@@ -49,10 +49,10 @@
     style_sheets: [ "register.css" ],
     scripts: [ "register.js" ],
     content: {
-        text id: "foo", type: "h1", value: "Title"
+        h1 id: "foo", body: { "Title" }
         div id: "yeet", body: {
-            text id: "#bar", type: "p", value: "Have a paragraph!"
-            text id: "bar", type: "p", value: "And another one."
+            p id: "#bar", body: { "Have a paragraph!" }
+            p id: "bar",  body: { "And another one." }
         }
     },
     bar: {},
@@ -96,12 +96,12 @@
             id: "hey_man",
             inherits: "wrapper",
             expression: {
-                text type: "span", value: "hi"
+                span body: { "hi" }
             },
         )
         div id: "#yay"
 
-        text id: "foo", type: "h1", value: "Title"
+        h1 id: "foo", body: { "Title" }
     },
 )
 

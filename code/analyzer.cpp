@@ -312,19 +312,18 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
     // NOTE(llw): text.
     else if(expr.type == context.strings.text) {
-
-        auto type = get_pointer(args, context.strings.type);
-        if(    !validate_arg_type_p(context.strings.type, ARG_STRING, true, type)
-            || !validate_arg_type  (context.strings.value, ARG_STRING, true)
-        ) {
+        if(id != NULL) {
+            printf("Error: 'text' expressions cannot have ids.\n");
             return false;
         }
 
-        if(!has(context.valid_text_types, type->value)) {
-            printf("Invalid text type.\n");
+        if(!validate_arg_type(context.strings.value, ARG_STRING, true)) {
             return false;
         }
-
+    }
+    // NOTE(llw): simple types.
+    else if(has(context.simple_types, expr.type)) {
+        // ok.
     }
     // NOTE(llw): Unknown.
     else {

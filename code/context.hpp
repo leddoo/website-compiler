@@ -34,7 +34,7 @@ extern struct Context {
             email;
     } strings;
 
-    Map<Interned_String, int> valid_text_types;
+    Map<Interned_String, int> simple_types;
 
 
     // Parser

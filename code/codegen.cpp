@@ -107,23 +107,30 @@ static void generate_html(
     }
 
 
+    auto write_body = [&]() {
+        auto body = get_pointer(args, context.strings.body);
+        if(body == NULL) {
+            return;
+        }
+
+        const auto &children = body->block;
+        for(Usize i = 0; i < children.count; i += 1) {
+            generate_html(
+                children[i], parent,
+                html, html_indent + 1,
+                init_js, init_js_indent
+            );
+        }
+    };
+
+
     if(expr.type == context.strings.div) {
         do_indent(html, html_indent);
         push(html, STRING("<div"));
         push(html, id_string);
         push(html, STRING(">\n"));
 
-        auto body = get_pointer(args, context.strings.body);
-        if(body != NULL) {
-            const auto &children = body->block;
-            for(Usize i = 0; i < children.count; i += 1) {
-                generate_html(
-                    children[i], parent,
-                    html, html_indent + 1,
-                    init_js, init_js_indent
-                );
-            }
-        }
+        write_body();
 
         do_indent(html, html_indent);
         push(html, STRING("</div>\n"));
@@ -134,17 +141,7 @@ static void generate_html(
         push(html, id_string);
         push(html, STRING(">\n"));
 
-        auto body = get_pointer(args, context.strings.body);
-        if(body != NULL) {
-            const auto &children = body->block;
-            for(Usize i = 0; i < children.count; i += 1) {
-                generate_html(
-                    children[i], parent,
-                    html, html_indent + 1,
-                    init_js, init_js_indent
-                );
-            }
-        }
+        write_body();
 
         do_indent(html, html_indent);
         push(html, STRING("</form>\n"));
@@ -176,22 +173,24 @@ static void generate_html(
         push(html, STRING(">\n"));
     }
     else if(expr.type == context.strings.text) {
-        auto type  = args[context.strings.type].value;
         auto value = args[context.strings.value].value;
 
         do_indent(html, html_indent);
+        push(html, value);
+        push(html, STRING("\n"));
+    }
+    else if(has(context.simple_types, expr.type)) {
+        do_indent(html, html_indent);
         push(html, STRING("<"));
-        push(html, type);
+        push(html, expr.type);
         push(html, id_string);
         push(html, STRING(">\n"));
 
-        do_indent(html, html_indent + 1);
-        push(html, value);
-        push(html, STRING("\n"));
+        write_body();
 
         do_indent(html, html_indent);
         push(html, STRING("</"));
-        push(html, type);
+        push(html, expr.type);
         push(html, STRING(">\n"));
     }
     else {
@@ -394,10 +393,6 @@ static void generate_instantiation_js(
     auto write_body = [&]() {
         auto body = get_pointer(args, context.strings.body);
         if(body != NULL) {
-            assert(expr.type == context.strings.div
-                || expr.type == context.strings.form
-            );
-
             const auto &children = body->block;
             for(Usize i = 0; i < children.count; i += 1) {
                 begin_element();
@@ -468,18 +463,18 @@ static void generate_instantiation_js(
         end_element();
     }
     else if(expr.type == context.strings.text) {
-        auto type  = args[context.strings.type].value;
         auto value = args[context.strings.value].value;
 
-        write_parent_variables();
-        write_create_dom(context.string_table[type], true);
+        do_indent(buffer, indent);
+        push(buffer, STRING("let text = document.createTextNode(\""));
+        push(buffer, value);
+        push(buffer, STRING("\");\n"));
 
         do_indent(buffer, indent);
-        push(buffer, STRING("dom.innerHTML = \""));
-        push(buffer, value);
-        push(buffer, STRING("\";\n"));
-
-        write_create_tree_node();
+        push(buffer, STRING("dom.append(text);\n"));
+    }
+    else if(has(context.simple_types, expr.type)) {
+        write_simple_element(context.string_table[expr.type]);
     }
     else {
         assert(false);
