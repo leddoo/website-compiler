@@ -55,6 +55,7 @@ _inline void push(Array<U8> &array, Interned_String id) {
 }
 
 
-Interned_String make_full_id_from_lid(Interned_String prefix, Interned_String lid);
-Interned_String make_full_id_from_gid(Interned_String gid);
+String get_id_identifier(Interned_String id, bool *is_global);
+
+Interned_String make_full_id(Interned_String prefix, String id, bool is_global);
 

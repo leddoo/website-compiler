@@ -99,20 +99,40 @@ void setup_context() {
 }
 
 
-Interned_String make_full_id_from_lid(Interned_String prefix, Interned_String lid) {
-    TEMP_SCOPE(context.temporary);
-    auto buffer = create_array<U8>(context.temporary);
-    push(buffer, prefix);
-    push(buffer, (U8)'.');
-    push(buffer, lid);
-    return intern(context.string_table, str(buffer));
+String get_id_identifier(Interned_String id, bool *is_global) {
+    auto ident = context.string_table[id];
+
+    auto is_gid = ident.values[0] == '#';
+    ident.values += is_gid;
+    ident.size   -= is_gid;
+
+    if(is_global != NULL) {
+        *is_global = is_gid;
+    }
+
+    return ident;
 }
 
-Interned_String make_full_id_from_gid(Interned_String gid) {
-    TEMP_SCOPE(context.temporary);
-    auto buffer = create_array<U8>(context.temporary);
-    push(buffer, STRING("page."));
-    push(buffer, gid);
-    return intern(context.string_table, str(buffer));
+Interned_String make_full_id(Interned_String prefix, String id, bool is_global) {
+    auto result = Interned_String {};
+
+    if(prefix != 0) {
+        TEMP_SCOPE(context.temporary);
+        auto buffer = create_array<U8>(context.temporary);
+
+        if(is_global) {
+            push(buffer, STRING("page."));
+            push(buffer, id);
+        }
+        else {
+            push(buffer, prefix);
+            push(buffer, STRING("."));
+            push(buffer, id);
+        }
+
+        result = intern(context.string_table, str(buffer));
+    }
+
+    return result;
 }
 

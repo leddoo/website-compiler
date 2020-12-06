@@ -52,7 +52,7 @@
         text id: "foo", type: "h1", value: "Title"
         spacer desktop: 4, mobile: 3
         div id: "yeet", body: {
-            text global_id: "bar", type: "p", value: "Have a paragraph!"
+            text id: "#bar", type: "p", value: "Have a paragraph!"
             text id: "bar", type: "p", value: "And another one."
         }
         spacer value: 1
@@ -101,7 +101,7 @@
                 text type: "span", value: "hi"
             },
         )
-        div global_id: "yay"
+        div id: "#yay"
 
         text id: "foo", type: "h1", value: "Title"
         spacer desktop: 4, mobile: 3

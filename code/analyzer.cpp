@@ -212,8 +212,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     auto parameters = get_pointer(args, context.strings.parameters);
     auto inherits   = get_pointer(args, context.strings.inherits);
     auto body       = get_pointer(args, context.strings.body);
-    auto lid        = get_pointer(args, context.strings.id);
-    auto gid        = get_pointer(args, context.strings.global_id);
+    auto id         = get_pointer(args, context.strings.id);
 
     use_arg(context.strings.defines);
     use_arg(context.strings.parameters);
@@ -223,14 +222,13 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     use_arg(context.strings.global_id);
 
     auto concrete = parameters == NULL && inherits == NULL;
-    auto has_id   = lid != NULL || gid != NULL;
 
 
     // NOTE(llw): Type specific validation.
 
     // NOTE(llw): page.
     if(expr.type == context.strings.page) {
-        if(has_id) {
+        if(id != NULL) {
             printf("Error: Pages cannot have ids.\n");
             return false;
         }
@@ -246,7 +244,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     // NOTE(llw): div.
     else if(expr.type == context.strings.div) {
 
-        if(defines == NULL && inherits == NULL && body == NULL && !has_id) {
+        if(defines == NULL && inherits == NULL && body == NULL && id == NULL) {
             printf("Error: Empty form.\n");
             return false;
         }
@@ -263,7 +261,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             vc.in_form = true;
         }
 
-        if(defines == NULL && inherits == NULL && body == NULL && !has_id) {
+        if(defines == NULL && inherits == NULL && body == NULL && id == NULL) {
             printf("Error: Empty form.\n");
             return false;
         }
@@ -277,7 +275,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             return false;
         }
 
-        if(!has_id) {
+        if(id == NULL) {
             printf("Error: form_field requires an id.\n");
             return false;
         }
@@ -331,7 +329,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     // NOTE(llw): spacer.
     else if(expr.type == context.strings.spacer) {
 
-        if(has_id) {
+        if(id != NULL) {
             printf("Spacers can't have ids.\n");
             return false;
         }
@@ -373,47 +371,25 @@ static bool validate(const Expression &expr, Validate_Context vc) {
 
     // NOTE(llw): Validate id.
     auto full_id = Interned_String {};
-    {
+    if(id != NULL) {
 
-        // NOTE(llw): lid nand gid.
-        if(lid != NULL && gid != NULL) {
-            printf("Cannot have both local and global id.\n");
-            return false;
-        }
-
-        // NOTE(llw): Check id type.
-        if(    lid != NULL && lid->type != ARG_STRING
-            || gid != NULL && gid->type != ARG_STRING
+        if(    id->type != ARG_STRING
+            || id->value == context.strings.empty_string
         ) {
-            printf("Ids must be strings.\n");
+            printf("Error: ids must be non-empty strings.\n");
             return false;
         }
 
-        // NOTE(llw): Check id is identifer.
-        if(has_id) {
-            Interned_String partial_id;
-            if(lid != NULL) {
-                partial_id = lid->value;
-            }
-            else {
-                partial_id = gid->value;
-            }
-
-            if(!is_identifier(context.string_table[partial_id])) {
-                printf("Ids must be identifiers.\n");
-                return false;
-            }
+        auto is_global = false;
+        auto ident = get_id_identifier(id->value, &is_global);
+        if(!is_identifier(ident)) {
+            printf("Error: ids must be identifiers.\n");
+            return false;
         }
 
         // NOTE(llw): Check id uniqueness.
-        full_id = Interned_String {};
-        if(vc.id_table != NULL && has_id) {
-            if(lid != NULL) {
-                full_id = make_full_id_from_lid(vc.id_prefix, lid->value);
-            }
-            else {
-                full_id = make_full_id_from_gid(gid->value);
-            }
+        if(vc.id_table != NULL) {
+            full_id = make_full_id(vc.id_prefix, ident, is_global);
 
             if(!insert_maybe(*vc.id_table, full_id, 0)) {
                 printf("Error: Duplicate id.\n");

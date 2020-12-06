@@ -82,21 +82,14 @@ static void generate_html(
 
     const auto &args = expr.arguments;
 
+    auto id = get_pointer(args, context.strings.id);
     auto full_id = Interned_String {};
-    {
-        auto lid = get_pointer(args, context.strings.id);
-        auto gid = get_pointer(args, context.strings.global_id);
+    if(id != NULL) {
+        auto is_global = false;
+        auto ident = get_id_identifier(id->value, &is_global);
 
-        if(lid != NULL) {
-            full_id = make_full_id_from_lid(parent, lid->value);
-        }
-        else if(gid != NULL) {
-            full_id = make_full_id_from_gid(gid->value);
-        }
-
-        if(full_id) {
-            parent = full_id;
-        }
+        full_id = make_full_id(parent, ident, is_global);
+        parent = full_id;
     }
 
     auto id_string = create_array<U8>(context.temporary);
@@ -332,17 +325,12 @@ static void generate_instantiation_js(
 ) {
     const auto &args = expr.arguments;
 
-    auto lid = get_pointer(args, context.strings.id);
-    auto gid = get_pointer(args, context.strings.global_id);
+    auto id = get_pointer(args, context.strings.id);
+    auto identifier = String {};
+    auto is_global_id = false;
 
-    auto id = Interned_String {};
-    {
-        if(lid != NULL) {
-            id = lid->value;
-        }
-        else if(gid != NULL) {
-            id = gid->value;
-        }
+    if(id != NULL) {
+        identifier = get_id_identifier(id->value, &is_global_id);
     }
 
 
@@ -364,7 +352,7 @@ static void generate_instantiation_js(
         push(buffer, STRING("let my_dom_parent = dom;\n"));
 
         do_indent(buffer, indent);
-        if(gid != NULL) {
+        if(is_global_id) {
             push(buffer, STRING("let my_tree_parent = window.page;\n"));
         }
         else if(parent_is_tree_node) {
@@ -379,12 +367,12 @@ static void generate_instantiation_js(
 
             do_indent(buffer, indent);
             push(buffer, STRING("console.assert(my_tree_parent[\""));
-            push(buffer, id);
+            push(buffer, identifier);
             push(buffer, STRING("\"] === undefined);\n"));
 
             do_indent(buffer, indent);
             push(buffer, STRING("let full_id = my_tree_parent.dom.id + \"."));
-            push(buffer, id);
+            push(buffer, identifier);
             push(buffer, STRING("\";\n"));
         }
     };
@@ -415,7 +403,7 @@ static void generate_instantiation_js(
 
             do_indent(buffer, indent);
             push(buffer, STRING("my_tree_parent[\""));
-            push(buffer, id);
+            push(buffer, identifier);
             push(buffer, STRING("\"] = me;\n"));
 
             do_indent(buffer, indent);
