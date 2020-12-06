@@ -638,6 +638,47 @@ static bool instantiate(
 ) {
     TEMP_SCOPE(context.temporary);
 
+    auto instantiate_and_merge = [](Expression &reference, Interned_String inherits) {
+        auto symbol = context.symbols[inherits];
+        auto instance = duplicate(*symbol.expression, context.arena);
+        if(!instantiate(&reference, instance)) {
+            return false;
+        }
+
+        auto &inst_args = instance.arguments;
+        auto &def_args  = reference.arguments;
+
+        // NOTE(llw): Remove defines/inherits.
+        remove(inst_args, context.strings.defines);
+        remove(def_args, context.strings.inherits);
+
+        // NOTE(llw): Merge.
+        for(Usize i = 0; i < inst_args.count; i += 1) {
+            auto name = inst_args.entries[i].key;
+            auto value = inst_args.entries[i].value;
+
+            if(    name == context.strings.style_sheets
+                || name == context.strings.scripts
+                || name == context.strings.styles
+            ) {
+                auto &list = value.list;
+                auto def_values = get_pointer(def_args, name);
+                if(def_values) {
+                    push(list, def_values->list);
+                    def_values->list = list;
+                }
+                else {
+                    insert(def_args, name, value);
+                }
+            }
+            else {
+                insert_maybe(def_args, name, value);
+            }
+        }
+
+        return true;
+    };
+
     auto &args = definition.arguments;
 
     // NOTE(llw): Insert arguments.
@@ -675,71 +716,19 @@ static bool instantiate(
             auto &expr = block[expr_index];
 
             auto inherits = get_pointer(expr.arguments, context.strings.inherits);
-            if(inherits != 0 && (
-                   expr.type == context.strings.div
-                || expr.type == context.strings.form
-            )) {
-                auto symbol = context.symbols[inherits->value];
-                auto instance = duplicate(*symbol.expression, context.arena);
-                if(!instantiate(&expr, instance)) {
+            if(inherits != NULL) {
+                if(!instantiate_and_merge(expr, inherits->value)) {
                     return false;
-                }
-
-                auto &inst_args = instance.arguments;
-                auto &def_args  = expr.arguments;
-
-                // NOTE(llw): Remove name/inherits.
-                remove(inst_args, context.strings.defines);
-                remove(def_args, context.strings.inherits);
-
-                // NOTE(llw): Merge.
-                for(Usize i = 0; i < inst_args.count; i += 1) {
-                    auto name = inst_args.entries[i].key;
-                    auto value = inst_args.entries[i].value;
-                    insert_maybe(def_args, name, value);
                 }
             }
         }
     }
 
-    // NOTE(llw): Recurse on pages.
+    // NOTE(llw): Recurse.
     auto inherits = get_pointer(args, context.strings.inherits);
-    if(    inherits != NULL
-        && definition.type == context.strings.page
-    ) {
-        const auto &symbol = context.symbols[inherits->value];
-
-        // NOTE(llw): Instantiate.
-        auto instance = duplicate(*symbol.expression, context.arena);
-        if(!instantiate(&definition, instance)) {
+    if(inherits != NULL) {
+        if(!instantiate_and_merge(definition, inherits->value)) {
             return false;
-        }
-
-        auto &inst_args = instance.arguments;
-        auto &def_args = definition.arguments;
-
-        // NOTE(llw): Remove name/inherits.
-        remove(inst_args, context.strings.defines);
-        remove(def_args, context.strings.inherits);
-
-        // NOTE(llw): Merge.
-        for(Usize i = 0; i < inst_args.count; i += 1) {
-            auto name = inst_args.entries[i].key;
-            auto &value = inst_args.entries[i].value;
-
-            if(    name != context.strings.style_sheets
-                && name != context.strings.scripts
-            ) {
-                insert_maybe(def_args, name, value);
-            }
-            else {
-                auto &list = value.list;
-                auto def_values = get_pointer(def_args, name);
-                if(def_values) {
-                    push(list, def_values->list);
-                    def_values->list = list;
-                }
-            }
         }
     }
 

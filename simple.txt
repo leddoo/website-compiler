@@ -118,3 +118,28 @@
     },
 )
 
+
+
+(div
+    defines: "x0",
+    id: "x0",
+    parameters: [ foo ],
+    body: { foo },
+    styles: [ "x0" ],
+)
+
+(div
+    defines: "x1",
+    id: "x1",
+    inherits: "x0",
+    foo: { "hi" },
+    styles: [ "x1" ],
+)
+
+(page
+    defines: "inheritance_test",
+    body: {
+        div inherits: "x1"
+    },
+)
+
