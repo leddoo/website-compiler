@@ -106,6 +106,39 @@ static void generate_html(
         push(init_js, STRING("\") };\n"));
     }
 
+    auto styles_string = create_array<U8>(context.temporary);
+    auto styles = get_pointer(args, context.strings.styles);
+    if(styles != NULL) {
+        push(styles_string, STRING(" class=\""));
+
+        const auto &list = styles->list;
+        for(Usize i = 0; i < list.count; i += 1) {
+            push(styles_string, list[i].value);
+
+            if(i < list.count - 1) {
+                push(styles_string, STRING(" "));
+            }
+        }
+
+        push(styles_string, STRING("\""));
+    }
+
+
+    auto begin_simple_element = [&](Interned_String type) {
+        do_indent(html, html_indent);
+        push(html, STRING("<"));
+        push(html, type);
+        push(html, id_string);
+        push(html, styles_string);
+        push(html, STRING(">\n"));
+    };
+
+    auto end_element = [&](Interned_String type) {
+        do_indent(html, html_indent);
+        push(html, STRING("</"));
+        push(html, type);
+        push(html, STRING(">\n"));
+    };
 
     auto write_body = [&]() {
         auto body = get_pointer(args, context.strings.body);
@@ -123,28 +156,18 @@ static void generate_html(
         }
     };
 
+    auto write_simple_element = [&](Interned_String type) {
+        begin_simple_element(type);
+        write_body();
+        end_element(type);
+    };
+
 
     if(expr.type == context.strings.div) {
-        do_indent(html, html_indent);
-        push(html, STRING("<div"));
-        push(html, id_string);
-        push(html, STRING(">\n"));
-
-        write_body();
-
-        do_indent(html, html_indent);
-        push(html, STRING("</div>\n"));
+        write_simple_element(context.strings.div);
     }
     else if(expr.type == context.strings.form) {
-        do_indent(html, html_indent);
-        push(html, STRING("<form"));
-        push(html, id_string);
-        push(html, STRING(">\n"));
-
-        write_body();
-
-        do_indent(html, html_indent);
-        push(html, STRING("</form>\n"));
+        write_simple_element(context.strings.form);
     }
     else if(expr.type == context.strings.form_field) {
         auto title = args[context.strings.title].value;
@@ -180,18 +203,7 @@ static void generate_html(
         push(html, STRING("\n"));
     }
     else if(has(context.simple_types, expr.type)) {
-        do_indent(html, html_indent);
-        push(html, STRING("<"));
-        push(html, expr.type);
-        push(html, id_string);
-        push(html, STRING(">\n"));
-
-        write_body();
-
-        do_indent(html, html_indent);
-        push(html, STRING("</"));
-        push(html, expr.type);
-        push(html, STRING(">\n"));
+        write_simple_element(expr.type);
     }
     else {
         assert(false);
@@ -352,7 +364,7 @@ static void generate_instantiation_js(
         }
     };
 
-    auto write_create_dom = [&](String type, bool takes_id) {
+    auto write_create_dom = [&](String type, bool takes_id, bool takes_styles) {
         push(buffer, STRING("\n"));
 
         do_indent(buffer, indent);
@@ -366,6 +378,17 @@ static void generate_instantiation_js(
         if(takes_id && id != 0) {
             do_indent(buffer, indent);
             push(buffer, STRING("dom.id = full_id;\n"));
+        }
+
+        auto styles = get_pointer(args, context.strings.styles);
+        if(takes_styles && styles != NULL) {
+            const auto &list = styles->list;
+            for(Usize i = 0; i < list.count; i += 1) {
+                do_indent(buffer, indent);
+                push(buffer, STRING("dom.classList.add(\""));
+                push(buffer, list[i].value);
+                push(buffer, STRING("\");\n"));
+            }
         }
     };
 
@@ -408,7 +431,7 @@ static void generate_instantiation_js(
 
     auto write_simple_element = [&](String type) {
         write_parent_variables();
-        write_create_dom(type, true);
+        write_create_dom(type, true, true);
         write_create_tree_node();
         write_body();
     };
@@ -430,7 +453,7 @@ static void generate_instantiation_js(
 
         begin_element();
         {
-            write_create_dom(STRING("label"), false);
+            write_create_dom(STRING("label"), false, false);
 
             do_indent(buffer, indent);
             push(buffer, STRING("dom.htmlFor = full_id\n"));
@@ -444,7 +467,7 @@ static void generate_instantiation_js(
 
         begin_element();
         {
-            write_create_dom(STRING("input"), true);
+            write_create_dom(STRING("input"), true, true);
 
             do_indent(buffer, indent);
             push(buffer, STRING("dom.type = \""));

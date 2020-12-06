@@ -181,10 +181,13 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         return validate_arg_type_p(name, type, required, arg);
     };
 
-    auto validate_arg_list = [&](Interned_String name, Argument_Type type, bool required) {
+    auto validate_arg_list_p = [&](
+        Interned_String name, Argument_Type type,
+        bool required,
+        const Argument *arg
+    ) {
         use_arg(name);
 
-        auto arg = get_pointer(args, name);
         if(arg == NULL) {
             if(required) {
                 printf("Error: Missing required argument '%s'.\n",
@@ -206,6 +209,11 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         return true;
     };
 
+    auto validate_arg_list = [&](Interned_String name, Argument_Type type, bool required) {
+        auto arg = get_pointer(args, name);
+        return validate_arg_list_p(name, type, required, arg);
+    };
+
 
 
     auto defines    = get_pointer(args, context.strings.defines);
@@ -213,13 +221,13 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     auto inherits   = get_pointer(args, context.strings.inherits);
     auto body       = get_pointer(args, context.strings.body);
     auto id         = get_pointer(args, context.strings.id);
+    auto styles     = get_pointer(args, context.strings.styles);
 
     use_arg(context.strings.defines);
     use_arg(context.strings.parameters);
     use_arg(context.strings.inherits);
     use_arg(context.strings.body);
     use_arg(context.strings.id);
-    use_arg(context.strings.global_id);
 
     auto concrete = parameters == NULL && inherits == NULL;
 
@@ -244,8 +252,13 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     // NOTE(llw): div.
     else if(expr.type == context.strings.div) {
 
-        if(defines == NULL && inherits == NULL && body == NULL && id == NULL) {
-            printf("Error: Empty form.\n");
+        if(    defines  == NULL
+            && inherits == NULL
+            && body     == NULL
+            && id       == NULL
+            && styles   == NULL
+        ) {
+            printf("Error: Empty div.\n");
             return false;
         }
 
@@ -261,7 +274,12 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             vc.in_form = true;
         }
 
-        if(defines == NULL && inherits == NULL && body == NULL && id == NULL) {
+        if(    defines  == NULL
+            && inherits == NULL
+            && body     == NULL
+            && id       == NULL
+            && styles   == NULL
+        ) {
             printf("Error: Empty form.\n");
             return false;
         }
@@ -469,6 +487,12 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             }
         }
 
+    }
+
+
+    // NOTE(llw): Styles.
+    if(!validate_arg_list(context.strings.styles, ARG_STRING, false)) {
+        return false;
     }
 
 

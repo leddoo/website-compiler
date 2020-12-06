@@ -36,7 +36,6 @@ void setup_context() {
     auto &table = context.string_table;
 
     strings.id        = intern(table, STRING("id"));
-    strings.global_id = intern(table, STRING("global_id"));
 
     strings.defines  = intern(table, STRING("defines"));
     strings.inherits = intern(table, STRING("inherits"));
@@ -44,6 +43,7 @@ void setup_context() {
     strings.body = intern(table, STRING("body"));
     strings.type  = intern(table, STRING("type"));
     strings.value = intern(table, STRING("value"));
+    strings.styles = intern(table, STRING("styles"));
 
     strings.desktop = intern(table, STRING("desktop"));
     strings.mobile  = intern(table, STRING("mobile"));
