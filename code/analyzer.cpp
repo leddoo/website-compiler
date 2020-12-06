@@ -326,31 +326,6 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         }
 
     }
-    // NOTE(llw): spacer.
-    else if(expr.type == context.strings.spacer) {
-
-        if(id != NULL) {
-            printf("Spacers can't have ids.\n");
-            return false;
-        }
-
-        auto value   = get_pointer(args, context.strings.value);
-        auto desktop = get_pointer(args, context.strings.desktop);
-        auto mobile  = get_pointer(args, context.strings.mobile);
-
-        if(is_number(value)) {
-            use_arg(context.strings.value);
-        }
-        else if(is_number(desktop) && is_number(mobile)) {
-            use_arg(context.strings.desktop);
-            use_arg(context.strings.mobile);
-        }
-        else {
-            printf("Invalid spacer expression.\n");
-            return false;
-        }
-
-    }
     // NOTE(llw): Unknown.
     else {
         auto type = context.string_table[expr.type];

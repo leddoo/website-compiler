@@ -25,7 +25,7 @@ extern struct Context {
             body, type, value,
             desktop, mobile,
             page, title, icon, style_sheets, scripts,
-            text, spacer, div,
+            text, div,
             h1, p, span,
             parameters,
             form, form_field, form_submit,

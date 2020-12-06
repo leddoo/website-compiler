@@ -50,12 +50,10 @@
     scripts: [ "register.js" ],
     content: {
         text id: "foo", type: "h1", value: "Title"
-        spacer desktop: 4, mobile: 3
         div id: "yeet", body: {
             text id: "#bar", type: "p", value: "Have a paragraph!"
             text id: "bar", type: "p", value: "And another one."
         }
-        spacer value: 1
     },
     bar: {},
 )
@@ -104,8 +102,6 @@
         div id: "#yay"
 
         text id: "foo", type: "h1", value: "Title"
-        spacer desktop: 4, mobile: 3
-        spacer value: 1
     },
 )
 

@@ -194,30 +194,6 @@ static void generate_html(
         push(html, type);
         push(html, STRING(">\n"));
     }
-    else if(expr.type == context.strings.spacer) {
-        if(has(args, context.strings.value)) {
-            auto value = args[context.strings.value].value;
-
-            do_indent(html, html_indent);
-            push(html, STRING("<div style=\"spacer_"));
-            push(html, value);
-            push(html, STRING("\"></div>\n"));
-        }
-        else {
-            auto desktop = args[context.strings.desktop].value;
-            auto mobile  = args[context.strings.mobile].value;
-
-            do_indent(html, html_indent);
-            push(html, STRING("<div style=\"spacer_"));
-            push(html, desktop);
-            push(html, STRING(" desktop\"></div>\n"));
-
-            do_indent(html, html_indent);
-            push(html, STRING("<div style=\"spacer_"));
-            push(html, mobile);
-            push(html, STRING(" mobile\"></div>\n"));
-        }
-    }
     else {
         assert(false);
     }
@@ -504,56 +480,6 @@ static void generate_instantiation_js(
         push(buffer, STRING("\";\n"));
 
         write_create_tree_node();
-    }
-    else if(expr.type == context.strings.spacer) {
-        write_parent_variables();
-
-        if(has(args, context.strings.value)) {
-            auto value = args[context.strings.value].value;
-
-            begin_element();
-            {
-                write_create_dom(STRING("div"), true);
-
-                do_indent(buffer, indent);
-                push(buffer, STRING("dom.classList.add(\"spacer_"));
-                push(buffer, value);
-                push(buffer, STRING("\");\n"));
-            }
-            end_element();
-        }
-        else {
-            auto desktop = args[context.strings.desktop].value;
-            auto mobile  = args[context.strings.mobile].value;
-
-            begin_element();
-            {
-                write_create_dom(STRING("div"), true);
-
-                do_indent(buffer, indent);
-                push(buffer, STRING("dom.classList.add(\"desktop\");\n"));
-
-                do_indent(buffer, indent);
-                push(buffer, STRING("dom.classList.add(\"spacer_"));
-                push(buffer, desktop);
-                push(buffer, STRING("\");\n"));
-            }
-            end_element();
-
-            begin_element();
-            {
-                write_create_dom(STRING("div"), true);
-
-                do_indent(buffer, indent);
-                push(buffer, STRING("dom.classList.add(\"mobile\");\n"));
-
-                do_indent(buffer, indent);
-                push(buffer, STRING("dom.classList.add(\"spacer_"));
-                push(buffer, mobile);
-                push(buffer, STRING("\");\n"));
-            }
-            end_element();
-        }
     }
     else {
         assert(false);

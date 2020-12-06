@@ -55,7 +55,6 @@ void setup_context() {
     strings.scripts      = intern(table, STRING("scripts"));
 
     strings.text   = intern(table, STRING("text"));
-    strings.spacer = intern(table, STRING("spacer"));
     strings.div    = intern(table, STRING("div"));
 
     strings.h1   = intern(table, STRING("h1"));
