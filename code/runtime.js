@@ -21,7 +21,7 @@ function tn_remove(me) {
 
 function tn_remove_child_maybe(me, x) {
     if(typeof x === "string") {
-        console.assert(typeof me === "Tree_Node");
+        console.assert(me instanceof Tree_Node);
 
         let name = x;
         if(!(name in me)) {
@@ -37,7 +37,7 @@ function tn_remove_child_maybe(me, x) {
 
         return true;
     }
-    else if(typeof x === "Tree_Node") {
+    else if(x instanceof Tree_Node) {
         return tn_remove_child_maybe(me, x.Name);
     }
 
@@ -52,9 +52,9 @@ function tn_remove_child(me, x) {
 
 
 function tn_insert_maybe(me, node, x) {
-    if(is_dom_element(x) || typeof x === "undefined") {
-        console.assert(typeof me   === "Tree_Node");
-        console.assert(typeof node === "Tree_Node");
+    if(is_dom_element(x) || x === undefined) {
+        console.assert(me   instanceof "Tree_Node");
+        console.assert(node instanceof "Tree_Node");
         console.assert(node.Parent === null);
         console.assert(node.Type   !== "Page");
 
@@ -64,7 +64,7 @@ function tn_insert_maybe(me, node, x) {
 
         let dom_parent = me.Dom;
         let dom_target = x;
-        if(typeof x === "undefined") {
+        if(x === undefined) {
             // NOTE(llw): Append to me.Dom.
             dom_target = null;
         }
@@ -83,7 +83,7 @@ function tn_insert_maybe(me, node, x) {
         return true;
     }
     else if(typeof x === "string") {
-        console.assert(typeof me === "Tree_Node");
+        console.assert(me instanceof "Tree_Node");
 
         if(!(x in me)) {
             return false;
@@ -91,7 +91,7 @@ function tn_insert_maybe(me, node, x) {
 
         return tn_insert_maybe(me, node, me[x].Dom);
     }
-    else if(typeof x === "Tree_Node") {
+    else if(x instanceof "Tree_Node") {
         return tn_insert_maybe(me, node, x.Dom);
     }
 
