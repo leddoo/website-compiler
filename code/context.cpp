@@ -63,12 +63,12 @@ void setup_context() {
 
     strings.parameters = intern(table, STRING("parameters"));
 
-    strings.form        = intern(table, STRING("form"));
-    strings.form_field  = intern(table, STRING("form_field"));
-    strings.form_submit = intern(table, STRING("form_submit"));
+    strings.form = intern(table, STRING("form"));
 
-    strings.form_list      = intern(table, STRING("form_list"));
-    strings.form_list_item = intern(table, STRING("form_list_item"));
+    strings.label = intern(table, STRING("label"));
+    strings.input = intern(table, STRING("input"));
+
+    strings._for = intern(table, STRING("for"));
 
     strings.min     = intern(table, STRING("min"));
     strings.max     = intern(table, STRING("max"));
@@ -132,6 +132,14 @@ Interned_String make_full_id(Interned_String prefix, String id, bool is_global) 
         result = intern(context.string_table, str(buffer));
     }
 
+    return result;
+}
+
+Interned_String make_full_id(Interned_String prefix, Interned_String id) {
+    auto is_global = false;
+    auto ident = get_id_identifier(id, &is_global);
+
+    auto result = make_full_id(prefix, ident, is_global);
     return result;
 }
 

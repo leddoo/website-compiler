@@ -70,16 +70,16 @@
 (form
     defines: "yay_forms",
     body: {
-        (form_field
-            title: "Name",
+        (label for: "name", body: { "Name" })
+        (input
             id: "name",
             type: "text",
             min: 1,
             max: 3,
             initial: "hi",
         )
-        (form_field
-            title: "E-Mail",
+        (label for: "email", body: { "E-Mail" })
+        (input
             id: "email",
             type: "email",
             min: 1,
@@ -102,8 +102,10 @@
                 span body: { "hi" }
             },
         )
+        label for: "#yay"
         div id: "#yay"
 
+        label for: "foo"
         h1 id: "foo", body: { "Title" }
     },
 )

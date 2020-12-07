@@ -85,10 +85,7 @@ static void generate_html(
     auto id = get_pointer(args, context.strings.id);
     auto full_id = Interned_String {};
     if(id != NULL) {
-        auto is_global = false;
-        auto ident = get_id_identifier(id->value, &is_global);
-
-        full_id = make_full_id(parent, ident, is_global);
+        full_id = make_full_id(parent, id->value);
         parent = full_id;
     }
 
@@ -169,22 +166,31 @@ static void generate_html(
     else if(expr.type == context.strings.form) {
         write_simple_element(context.strings.form);
     }
-    else if(expr.type == context.strings.form_field) {
-        auto title = args[context.strings.title].value;
-        auto type  = args[context.strings.type].value;
-
-        auto initial = get_pointer(args, context.strings.initial);
+    else if(expr.type == context.strings.label) {
+        auto _for = get_pointer(args, context.strings._for);
 
         do_indent(html, html_indent);
-        push(html, STRING("<label for=\""));
-        push(html, full_id);
-        push(html, STRING("\">"));
-        push(html, title);
-        push(html, STRING("</label>\n"));
+        push(html, STRING("<label"));
+        push(html, id_string);
+        push(html, styles_string);
+        if(_for != NULL) {
+            push(html, STRING(" for=\""));
+            push(html, make_full_id(parent, _for->value));
+            push(html, STRING("\""));
+        }
+        push(html, STRING(">\n"));
+
+        write_body();
+        end_element(context.strings.label);
+    }
+    else if(expr.type == context.strings.input) {
+        auto type  = args[context.strings.type].value;
+        auto initial = get_pointer(args, context.strings.initial);
 
         do_indent(html, html_indent);
         push(html, STRING("<input"));
         push(html, id_string);
+        push(html, styles_string);
         push(html, STRING(" type=\""));
         push(html, type);
         push(html, STRING("\""));
@@ -443,47 +449,51 @@ static void generate_instantiation_js(
     else if(expr.type == context.strings.form) {
         write_simple_element(STRING("form"));
     }
-    else if(expr.type == context.strings.form_field) {
-        auto title = args[context.strings.title].value;
-        auto type  = args[context.strings.type].value;
+    else if(expr.type == context.strings.label) {
+        auto _for = get_pointer(args, context.strings._for);
 
+        write_parent_variables();
+        write_create_dom(STRING("label"), true, true);
+
+        if(_for != NULL) {
+            auto global = false;
+            auto ident = get_id_identifier(_for->value, &global);
+
+            do_indent(buffer, indent);
+            if(global) {
+                push(buffer, STRING("dom.htmlFor = \"page."));
+            }
+            else {
+                push(buffer, STRING("dom.htmlFor = my_tree_parent.dom.id + \"."));
+            }
+            push(buffer, ident);
+            push(buffer, STRING("\";\n"));
+        }
+
+        write_create_tree_node();
+        write_body();
+    }
+    else if(expr.type == context.strings.input) {
+        auto type = args[context.strings.type].value;
         auto initial = get_pointer(args, context.strings.initial);
 
         write_parent_variables();
+        write_create_dom(STRING("input"), true, true);
 
-        begin_element();
-        {
-            write_create_dom(STRING("label"), false, false);
+        do_indent(buffer, indent);
+        push(buffer, STRING("dom.type = \""));
+        push(buffer, type);
+        push(buffer, STRING("\";\n"));
 
+        if(initial != NULL) {
             do_indent(buffer, indent);
-            push(buffer, STRING("dom.htmlFor = full_id\n"));
-
-            do_indent(buffer, indent);
-            push(buffer, STRING("dom.innerHTML = \""));
-            push(buffer, title);
-            push(buffer, STRING("\"\n"));
-        }
-        end_element();
-
-        begin_element();
-        {
-            write_create_dom(STRING("input"), true, true);
-
-            do_indent(buffer, indent);
-            push(buffer, STRING("dom.type = \""));
-            push(buffer, type);
+            push(buffer, STRING("dom.value = \""));
+            push(buffer, initial->value);
             push(buffer, STRING("\";\n"));
-
-            if(initial != NULL) {
-                do_indent(buffer, indent);
-                push(buffer, STRING("dom.value = \""));
-                push(buffer, initial->value);
-                push(buffer, STRING("\";\n"));
-            }
-
-            write_create_tree_node();
         }
-        end_element();
+
+        write_create_tree_node();
+        write_body();
     }
     else if(expr.type == context.strings.text) {
         auto value = args[context.strings.value].value;

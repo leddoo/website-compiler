@@ -28,8 +28,9 @@ extern struct Context {
             text, div,
             h1, p, span,
             parameters,
-            form, form_field, form_submit,
-            form_list, form_list_item,
+            form,
+            label, input,
+            _for,
             min, max, locked, initial,
             email;
     } strings;
@@ -58,4 +59,6 @@ _inline void push(Array<U8> &array, Interned_String id) {
 String get_id_identifier(Interned_String id, bool *is_global);
 
 Interned_String make_full_id(Interned_String prefix, String id, bool is_global);
+
+Interned_String make_full_id(Interned_String prefix, Interned_String id);
 

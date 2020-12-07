@@ -41,7 +41,8 @@ _inline bool is_identifier(String string) {
 
 struct Validate_Context {
     Map<Interned_String, int> *id_table;
-    Interned_String id_prefix;
+    Array<Interned_String>    *label_fors;
+    Interned_String           id_prefix;
     bool in_form;
 };
 
@@ -285,29 +286,31 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         }
 
     }
-    // NOTE(llw): form field.
-    else if(expr.type == context.strings.form_field) {
-
-        if(!vc.in_form) {
-            printf("Error: form_field needs to be inside a form.\n");
+    // NOTE(llw): label.
+    else if(expr.type == context.strings.label) {
+        auto _for = get_pointer(args, context.strings._for);
+        if(!validate_arg_type_p(context.strings._for, ARG_STRING, false, _for)) {
             return false;
         }
 
+        if(_for != NULL && vc.id_prefix != 0) {
+            auto referenced = make_full_id(vc.id_prefix, _for->value);
+            push(*vc.label_fors, referenced);
+        }
+    }
+    // NOTE(llw): input.
+    else if(expr.type == context.strings.input) {
         if(id == NULL) {
-            printf("Error: form_field requires an id.\n");
+            printf("Error: input requires an id.\n");
             return false;
         }
 
         auto type    = get_pointer(args, context.strings.type);
         auto min     = get_pointer(args, context.strings.min);
         auto max     = get_pointer(args, context.strings.max);
-        auto locked  = get_pointer(args, context.strings.locked);
         auto initial = get_pointer(args, context.strings.initial);
 
-        if(    !validate_arg_type_p(context.strings.type, ARG_STRING, true, type)
-            || !validate_arg_type  (context.strings.title, ARG_STRING, true)
-            || !validate_arg_type_p(context.strings.locked, ARG_NUMBER, false, locked)
-        ) {
+        if(!validate_arg_type_p(context.strings.type, ARG_STRING, true, type)) {
             return false;
         }
 
@@ -323,10 +326,9 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             }
         }
         else {
-            printf("Invalid form field type.\n");
+            printf("Invalid input type.\n");
             return false;
         }
-
     }
     // NOTE(llw): text.
     else if(expr.type == context.strings.text) {
@@ -380,7 +382,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         }
 
         // NOTE(llw): Check id uniqueness.
-        if(vc.id_table != NULL) {
+        if(vc.id_prefix != 0) {
             full_id = make_full_id(vc.id_prefix, ident, is_global);
 
             if(!insert_maybe(*vc.id_table, full_id, 0)) {
@@ -520,21 +522,40 @@ static bool validate(Symbol &symbol) {
         return false;
     }
 
-    auto vc = Validate_Context {};
+    const auto &expr = *symbol.expression;
 
+    auto vc = Validate_Context {};
     auto id_table = create_map<Interned_String, int>(context.arena);
-    if(    symbol.expression->type == context.strings.page
-        && is_concrete(*symbol.expression)
-    ) {
+    auto label_fors = create_array<Interned_String>(context.arena);
+
+    if(is_concrete(*symbol.expression)) {
+        if(expr.type == context.strings.page) {
+            vc.id_prefix = context.strings.page;
+        }
+        else {
+            vc.id_prefix = context.strings.empty_string;
+        }
         vc.id_table = &id_table;
-        vc.id_prefix = context.strings.page;
+        vc.label_fors = &label_fors;
     }
 
     symbol.state = SYMS_PROCESSING;
-    auto success = validate(*symbol.expression, vc);
+    auto success = validate(expr, vc);
     symbol.state = SYMS_DONE;
 
-    return success;
+    if(!success) {
+        return false;
+    }
+
+    for(Usize i = 0; i < label_fors.count; i += 1) {
+        auto id = label_fors[i];
+        if(!has(id_table, id)) {
+            printf("Error: id referenced by label does not exist.\n");
+            return false;
+        }
+    }
+
+    return true;
 }
 
 
@@ -627,11 +648,14 @@ static bool insert_arguments(
     }
 }
 
-// - Both reference and definition are modified!
-// - Remove parameter values, inherits from reference and insert into
-//   definition. Remove name and parameters from definition.
-// - Instantiate pages and references in definition.body (inherit arguments,
-//   outermost writer wins).
+/* NOTE(llw):
+    - Both reference and definition are modified!
+    - Removes parameter values from reference and inserts them into definition.
+    - Recurses on definition.body expressions and definition itself.
+    - "On way up", merging takes place:
+        - For style_sheets, scripts, styles lists: Concatenate.
+        - Others: Outermost writer wins.
+*/
 static bool instantiate(
     Expression *reference,
     Expression &definition
