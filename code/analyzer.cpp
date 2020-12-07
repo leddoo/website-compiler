@@ -767,6 +767,22 @@ static Expression *instantiate(const Expression &expr) {
         return NULL;
     }
 
+    if(result->type == context.strings.page) {
+        auto runtime = Argument {};
+        runtime.type = ARG_STRING;
+        runtime.value = intern(context.string_table, STRING("runtime.js"));
+
+        auto scripts = get_pointer(result->arguments, context.strings.scripts);
+        if(scripts == NULL) {
+            auto arg = create_argument(ARG_LIST, context.arena);
+            push(arg.list, runtime);
+            insert(result->arguments, context.strings.scripts, arg);
+        }
+        else {
+            push_at(scripts->list, 0, runtime);
+        }
+    }
+
     auto symbol = Symbol {};
     symbol.expression = result;
     if(!validate(symbol)) {
