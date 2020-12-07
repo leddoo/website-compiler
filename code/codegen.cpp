@@ -98,25 +98,25 @@ static void generate_html(
         do_indent(init_js, init_js_indent);
         push(init_js, STRING("\n"));
 
-        do_indent(init_js, init_js_indent);
-        push(init_js, STRING("var my_tree_parent = me;\n"));
+        if(is_global) {
+            do_indent(init_js, init_js_indent);
+            push(init_js, STRING("var my_tree_parent = window.page;\n"));
+        }
+        else {
+            do_indent(init_js, init_js_indent);
+            push(init_js, STRING("var my_tree_parent = me;\n"));
+        }
 
         do_indent(init_js, init_js_indent);
         push(init_js, STRING("{\n"));
         init_js_indent += 1;
 
         do_indent(init_js, init_js_indent);
-        push(init_js, STRING("let me = new Tree_Node(document.getElementById(\""));
+        push(init_js, STRING("let me = new Tree_Node(my_tree_parent, document.getElementById(\""));
         push(init_js, full_id);
         push(init_js, STRING("\"), \""));
         push(init_js, identifier);
         push(init_js, STRING("\", \"TBD\");\n"));
-
-        do_indent(init_js, init_js_indent);
-        push(init_js, STRING("me.Parent = my_tree_parent;\n"));
-
-        do_indent(init_js, init_js_indent);
-        push(init_js, STRING("my_tree_parent[me.Name] = me;\n"));
     }
 
     auto styles_string = create_array<U8>(context.temporary);
@@ -310,9 +310,7 @@ static Array<U8> generate_html(const Expression &page) {
 
     do_indent(init_js, 3);
     push(init_js, STRING(
-        "let me = new Tree_Node("
-        "document.getElementById(\"page\"), "
-        "\"page\", \"Page\");\n"
+        "let me = new Tree_Node(null, document.getElementById(\"page\"), \"page\", \"Page\");\n"
     ));
     do_indent(init_js, 3);
     push(init_js, STRING("window.page = me;\n"));
@@ -390,20 +388,6 @@ static void generate_instantiation_js(
         push(buffer, STRING("}\n"));
     };
 
-    auto write_full_id = [&]() {
-        if(id != NULL) {
-            do_indent(buffer, indent);
-            push(buffer, STRING("console.assert(!(\""));
-            push(buffer, identifier);
-            push(buffer, STRING("\" in my_tree_parent));\n"));
-
-            do_indent(buffer, indent);
-            push(buffer, STRING("let full_id = my_tree_parent.Dom.id + \"."));
-            push(buffer, identifier);
-            push(buffer, STRING("\";\n\n"));
-        }
-    };
-
     auto write_create_dom = [&](String type) {
         do_indent(buffer, indent);
         push(buffer, STRING("let dom = document.createElement(\""));
@@ -415,7 +399,9 @@ static void generate_instantiation_js(
 
         if(id != NULL) {
             do_indent(buffer, indent);
-            push(buffer, STRING("dom.id = full_id;\n"));
+            push(buffer, STRING("dom.id = my_tree_parent.Dom.id + \"."));
+            push(buffer, identifier);
+            push(buffer, STRING("\";\n"));
         }
 
         auto styles = get_pointer(args, context.strings.styles);
@@ -435,17 +421,9 @@ static void generate_instantiation_js(
 
         if(id != NULL) {
             do_indent(buffer, indent);
-            push(buffer, STRING("let me = new Tree_Node(dom, \""));
+            push(buffer, STRING("let me = new Tree_Node(my_tree_parent, dom, \""));
             push(buffer, identifier);
             push(buffer, STRING("\", \"TBD\");\n"));
-
-            do_indent(buffer, indent);
-            push(buffer, STRING("my_tree_parent[\""));
-            push(buffer, identifier);
-            push(buffer, STRING("\"] = me;\n"));
-
-            do_indent(buffer, indent);
-            push(buffer, STRING("me.Parent = my_tree_parent;\n"));
         }
         else {
             do_indent(buffer, indent);
@@ -469,7 +447,6 @@ static void generate_instantiation_js(
     auto write_simple_element = [&](String type) {
         write_parent_variables();
         begin_element();
-        write_full_id();
         write_create_dom(type);
         write_create_tree_node();
         write_body();
@@ -488,7 +465,6 @@ static void generate_instantiation_js(
 
         write_parent_variables();
         begin_element();
-        write_full_id();
         write_create_dom(STRING("label"));
 
         if(_for != NULL) {
@@ -516,7 +492,6 @@ static void generate_instantiation_js(
 
         write_parent_variables();
         begin_element();
-        write_full_id();
         write_create_dom(STRING("input"));
 
         do_indent(buffer, indent);

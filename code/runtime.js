@@ -2,15 +2,21 @@ function is_dom_element(e) {
     return e instanceof Element || e instanceof HTMLDocument;
 }
 
+// NOTE(llw): Result is added to the tree. Dom is not added to the dom.
 class Tree_Node {
-    constructor(dom, name, type) {
+    constructor(parent, dom, name, type) {
+        this.Parent = parent || null;
         this.Dom    = dom;
         this.Name   = name;
         this.Type   = type || null;
-        this.Parent = null;
 
         console.assert(!('tree_node' in dom));
         dom.tree_node = this;
+
+        if(parent) {
+            console.assert(!(name in parent), name + " already in " + parent.Name);
+            parent[name] = this;
+        }
     }
 }
 
@@ -51,56 +57,16 @@ function tn_remove_child(me, x) {
 }
 
 
-function tn_insert_maybe(me, node, x) {
-    if(is_dom_element(x) || x === undefined) {
-        console.assert(me   instanceof "Tree_Node");
-        console.assert(node instanceof "Tree_Node");
-        console.assert(node.Parent === null);
-        console.assert(node.Type   !== "Page");
+function tn_add_wrapper(me, name) {
+    console.assert(me instanceof Tree_Node);
+    console.assert(typeof name === "string");
 
-        if(node.Name in me) {
-            return false;
-        }
+    let div = document.createElement("div");
+    div.id = me.Dom.id + "." + name;
 
-        let dom_parent = me.Dom;
-        let dom_target = x;
-        if(x === undefined) {
-            // NOTE(llw): Append to me.Dom.
-            dom_target = null;
-        }
-        else {
-            // NOTE(llw): Parent may not be me.Dom!
-            dom_parent = x.parentNode;
-        }
+    let node = new Tree_Node(me, div, name, "TBD");
+    me.Dom.append(div);
 
-        // NOTE(llw): Add to dom.
-        dom_parent.insertBefore(node.Dom, dom_target);
-
-        // NOTE(llw): Add to tree.
-        me[node.Name] = node;
-        node.Parent = me;
-
-        return true;
-    }
-    else if(typeof x === "string") {
-        console.assert(me instanceof "Tree_Node");
-
-        if(!(x in me)) {
-            return false;
-        }
-
-        return tn_insert_maybe(me, node, me[x].Dom);
-    }
-    else if(x instanceof "Tree_Node") {
-        return tn_insert_maybe(me, node, x.Dom);
-    }
-
-    console.assert(false);
-    return false;
-}
-
-function tn_insert(me, node, x) {
-    let inserted = tn_insert_maybe(me, node, x);
-    console.assert(inserted);
+    return node;
 }
 
