@@ -784,18 +784,23 @@ static Expression *instantiate(const Expression &expr, bool *has_globals) {
     }
 
     if(result->type == context.strings.page) {
-        auto runtime = Argument {};
-        runtime.type = ARG_STRING;
+        auto default_scripts = create_argument(ARG_LIST, context.arena);
+
+        auto runtime = create_argument(ARG_STRING, context.arena);
         runtime.value = intern(context.string_table, STRING("runtime.js"));
+        push(default_scripts.list, runtime);
+
+        auto instantiate = create_argument(ARG_STRING, context.arena);
+        instantiate.value = intern(context.string_table, STRING("instantiate.js"));
+        push(default_scripts.list, instantiate);
 
         auto scripts = get_pointer(result->arguments, context.strings.scripts);
         if(scripts == NULL) {
-            auto arg = create_argument(ARG_LIST, context.arena);
-            push(arg.list, runtime);
-            insert(result->arguments, context.strings.scripts, arg);
+            insert(result->arguments, context.strings.scripts, default_scripts);
         }
         else {
-            push_at(scripts->list, 0, runtime);
+            push(default_scripts.list, scripts->list);
+            scripts->list = default_scripts.list;
         }
     }
 
