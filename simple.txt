@@ -102,8 +102,8 @@
                 span body: { "hi" }
             },
         )
-        label for: "yay"
-        div id: "yay"
+        label for: "#yay"
+        div id: "#yay"
 
         label for: "foo"
         h1 id: "foo", body: { "Title" }

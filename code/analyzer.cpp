@@ -42,14 +42,13 @@ _inline bool is_identifier(String string) {
 struct Validate_Context {
     Map<Interned_String, int> *id_table;
     Array<Interned_String>    *label_fors;
-    bool *has_globals;
 
     Interned_String           id_prefix;
     bool in_form;
 };
 
-static bool validate(Symbol &symbol, bool *has_globals = NULL);
-static Expression *instantiate(const Expression &expr, bool *has_globals = NULL);
+static bool validate(Symbol &symbol);
+static Expression *instantiate(const Expression &expr);
 
 
 bool analyze() {
@@ -95,17 +94,14 @@ bool analyze() {
             continue;
         }
 
-        auto has_globals = false;
-        auto instance = instantiate(*symbol.expression, &has_globals);
+        auto instance = instantiate(*symbol.expression);
         if(instance == NULL) {
             return false;
         }
 
         assert(is_concrete(*instance));
 
-        if(instance->type == context.strings.page || !has_globals) {
-            push(context.exports, instance);
-        }
+        push(context.exports, instance);
     }
 
     return true;
@@ -396,10 +392,6 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             }
         }
 
-        if(is_global) {
-            *vc.has_globals = true;
-        }
-
     }
 
     // NOTE(llw): Validate parameters.
@@ -522,7 +514,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
 }
 
 
-static bool validate(Symbol &symbol, bool *has_globals) {
+static bool validate(Symbol &symbol) {
     if(symbol.state == SYMS_DONE) {
         return true;
     }
@@ -536,8 +528,6 @@ static bool validate(Symbol &symbol, bool *has_globals) {
     auto vc = Validate_Context {};
     auto id_table = create_map<Interned_String, int>(context.arena);
     auto label_fors = create_array<Interned_String>(context.arena);
-    auto has_globs = false;
-    vc.has_globals = &has_globs;
 
     if(is_concrete(*symbol.expression)) {
         if(expr.type == context.strings.page) {
@@ -564,11 +554,6 @@ static bool validate(Symbol &symbol, bool *has_globals) {
             printf("Error: id referenced by label does not exist.\n");
             return false;
         }
-    }
-
-    if(has_globals != NULL) {
-        assert(is_concrete(expr));
-        *has_globals = has_globs;
     }
 
     return true;
@@ -775,7 +760,7 @@ static bool instantiate(
     return true;
 }
 
-static Expression *instantiate(const Expression &expr, bool *has_globals) {
+static Expression *instantiate(const Expression &expr) {
     auto result = allocate<Expression>(context.arena);
     *result = duplicate(expr, context.arena);
 
@@ -806,7 +791,7 @@ static Expression *instantiate(const Expression &expr, bool *has_globals) {
 
     auto symbol = Symbol {};
     symbol.expression = result;
-    if(!validate(symbol, has_globals)) {
+    if(!validate(symbol)) {
         return NULL;
     }
 
