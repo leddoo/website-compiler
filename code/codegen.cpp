@@ -114,7 +114,13 @@ static void generate_html(
         push(init_js, full_id);
         push(init_js, STRING("\"), \""));
         push(init_js, identifier);
-        push(init_js, STRING("\", my_tree_parent);\n"));
+        push(init_js, STRING("\");\n"));
+
+        do_indent(init_js, init_js_indent);
+        push(init_js, STRING("me.Parent = my_tree_parent;\n"));
+
+        do_indent(init_js, init_js_indent);
+        push(init_js, STRING("my_tree_parent[me.Name] = me;\n"));
     }
 
     auto styles_string = create_array<U8>(context.temporary);
@@ -310,7 +316,7 @@ static Array<U8> generate_html(const Expression &page) {
     push(init_js, STRING(
         "let me = new Tree_Node("
         "document.getElementById(\"page\"), "
-        "\"page\", null, \"Page\");\n"
+        "\"page\", \"Page\");\n"
     ));
     do_indent(init_js, 3);
     push(init_js, STRING("window.page = me;\n"));

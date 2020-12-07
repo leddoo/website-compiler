@@ -3,19 +3,14 @@ function is_dom_element(e) {
 }
 
 class Tree_Node {
-    constructor(dom, name, parent, type) {
+    constructor(dom, name, type) {
         this.Dom    = dom;
         this.Name   = name;
-        this.Parent = parent;
         this.Type   = type || null;
+        this.Parent = null;
 
         console.assert(!('tree_node' in dom));
         dom.tree_node = this;
-
-        if(parent) {
-            console.assert(!(name in parent));
-            parent[name] = this;
-        }
     }
 }
 
