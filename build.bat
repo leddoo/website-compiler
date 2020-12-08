@@ -3,6 +3,8 @@
 if not exist "build" (mkdir "build")
 pushd "build"
 
+python ..\code\make_array.py runtime ..\code\runtime.js runtime.inl
+
 set allow_unnamed_struct=/wd4201
 set allow_deleted_assignment=/wd4626
 set allow_shadow=/wd4456

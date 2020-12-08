@@ -3,6 +3,8 @@
 
 #include "stdio.h"
 
+#include "../build/runtime.inl"
+
 bool deploy() {
 
     // NOTE(llw): Copy referenced files.
@@ -44,6 +46,26 @@ bool deploy() {
 
         if(!write_entire_file(path, source.content)) {
             printf("Error: Could not write file '%s'\n", path);
+            return false;
+        }
+    }
+
+
+    // NOTE(llw): Write runtime.
+    {
+        auto buffer = Array<U8> {};
+        buffer.values = runtime;
+        buffer.count  = runtime_size;
+
+        TEMP_SCOPE(context.temporary);
+        auto out_path = create_array<U8>(context.temporary);
+        push(out_path, context.output_prefix);
+        push(out_path, STRING("runtime.js"));
+        push(out_path, (U8)0);
+
+        auto out_string = (const char *)out_path.values;
+        if(!write_entire_file(out_string, buffer)) {
+            printf("Error: Could not write file '%s'.\n", out_string);
             return false;
         }
     }
