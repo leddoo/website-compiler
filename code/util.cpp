@@ -1,4 +1,5 @@
 #include "util.hpp"
+#include "context.hpp"
 
 #pragma warning(disable:4996) // crt secure
 #include "cstdio"
@@ -150,5 +151,44 @@ Interned_String intern(String_Table &table, String string) {
     }
 
     return *pointer;
+}
+
+Interned_String intern(String_Table &table, const char *string) {
+    auto s = String { (U8 *)string, (Usize)strlen(string) };
+    auto result = intern(table, s);
+    return result;
+}
+
+_inline U8 last(const String &string) {
+    assert(string.size > 0);
+    auto result = string.values[string.size - 1];
+    return result;
+}
+
+Interned_String find_first_file(
+    const Array<Interned_String> &include_paths,
+    String file_name
+) {
+    for(Usize i = 0; i < include_paths.count; i += 1) {
+        TEMP_SCOPE(context.temporary);
+        auto buffer = create_array<U8>(context.temporary);
+
+        auto prefix = context.string_table[include_paths[i]];
+        push(buffer, prefix);
+        if(last(prefix) != '\\' && last(prefix) != '/') {
+            push(buffer, STRING("/"));
+        }
+        push(buffer, file_name);
+
+        auto f = fopen((char *)buffer.values, "rb");
+        if(f != NULL) {
+            fclose(f);
+
+            auto result = intern(context.string_table, str(buffer));
+            return result;
+        }
+    }
+
+    return 0;
 }
 

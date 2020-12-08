@@ -99,8 +99,6 @@ bool analyze() {
             return false;
         }
 
-        assert(is_concrete(*instance));
-
         push(context.exports, instance);
     }
 
@@ -768,6 +766,15 @@ static Expression *instantiate(const Expression &expr) {
         return NULL;
     }
 
+    assert(is_concrete(*result));
+
+    auto symbol = Symbol {};
+    symbol.expression = result;
+    if(!validate(symbol)) {
+        return NULL;
+    }
+
+    // NOTE(llw): Add default scripts.
     if(result->type == context.strings.page) {
         auto default_scripts = create_argument(ARG_LIST, context.arena);
 
@@ -787,12 +794,6 @@ static Expression *instantiate(const Expression &expr) {
             push(default_scripts.list, scripts->list);
             scripts->list = default_scripts.list;
         }
-    }
-
-    auto symbol = Symbol {};
-    symbol.expression = result;
-    if(!validate(symbol)) {
-        return NULL;
     }
 
     return result;

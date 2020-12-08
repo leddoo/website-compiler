@@ -4,6 +4,7 @@
 #include "analyzer.hpp"
 #include "codegen.hpp"
 #include "context.hpp"
+#include "deploy.hpp"
 
 #include <libcpp/memory/arena.hpp>
 #include <libcpp/memory/array.hpp>
@@ -22,30 +23,31 @@ int main(int argument_count, const char **arguments) {
 
     setup_context();
 
-    if(argument_count < 2) {
-        printf("Usage: %s sources", arguments[0]);
-        return 0;
+    if(!parse_arguments(argument_count, arguments)) {
+        return 1;
     }
 
-    for(int i = 1; i < argument_count; i += 1) {
-        auto path = arguments[i];
+    if(!read_sources()) {
+        return 1;
+    }
 
-        auto buffer = create_array<U8>(context.arena);
-        if(!read_entire_file(path, buffer)) {
-            printf("Error reading file %s\n", path);
-        }
-
-        if(!parse(buffer)) {
-            exit(1);
+    for(Usize i = 0; i < context.sources.count; i += 1) {
+        if(!parse(context.sources[i].content)) {
+            return 1;
         }
     }
 
     if(!analyze()) {
-        exit(1);
+        return 1;
     }
 
     codegen();
 
+    if(!deploy()) {
+        return 1;
+    }
+
     printf("Done.\n");
+    return 0;
 }
 

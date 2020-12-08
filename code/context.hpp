@@ -7,6 +7,11 @@
 #include <libcpp/memory/arena.hpp>
 using namespace libcpp;
 
+struct Source {
+    Interned_String file_path;
+    Array<U8> content;
+};
+
 extern struct Context {
 
     Arena temporary;
@@ -47,6 +52,11 @@ extern struct Context {
 
     Array<Expression *> exports;
 
+
+    Array<Source> sources;
+    Array<Interned_String> include_paths;
+    Interned_String output_prefix;
+
 } context;
 
 void setup_context();
@@ -61,4 +71,8 @@ String get_id_identifier(Interned_String id, bool *is_global);
 Interned_String make_full_id(Interned_String prefix, String id, bool is_global);
 
 Interned_String make_full_id(Interned_String prefix, Interned_String id);
+
+
+bool parse_arguments(int argument_count, const char **arguments);
+bool read_sources();
 

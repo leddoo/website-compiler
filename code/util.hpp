@@ -78,6 +78,7 @@ struct String_Table {
 String_Table create_string_table(Allocator &allocator = default_allocator);
 
 Interned_String intern(String_Table &table, String string);
+Interned_String intern(String_Table &table, const char *string);
 
 
 
@@ -119,4 +120,10 @@ _inline void push_bytes(Array<U8> &array, const U8 *src, Usize size) {
 _inline void push(Array<U8> &array, String string) {
     push_bytes(array, string.values, string.size);
 }
+
+
+Interned_String find_first_file(
+    const Array<Interned_String> &include_paths,
+    String file_name
+);
 

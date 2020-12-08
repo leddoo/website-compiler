@@ -1,5 +1,7 @@
 #include "context.hpp"
 
+#include <stdio.h>
+
 Context context;
 
 const char *argument_type_strings[ARG_LIST + 1] = {
@@ -19,6 +21,9 @@ void setup_context() {
     context.expressions  = { &context.arena };
     context.symbols      = create_map<Interned_String, Symbol>(context.arena);
     context.exports      = { &context.arena };
+
+    context.sources = { &context.arena };
+    context.include_paths = { &context.arena };
 
     context.strings.empty_string = intern(context.string_table, STRING(""));
 
@@ -141,5 +146,96 @@ Interned_String make_full_id(Interned_String prefix, Interned_String id) {
 
     auto result = make_full_id(prefix, ident, is_global);
     return result;
+}
+
+bool parse_arguments(int argument_count, const char **arguments) {
+    if(argument_count < 2) {
+        printf("Usage: %s [options] sources", arguments[0]);
+        return false;
+    }
+
+    for(int i = 1; i < argument_count; i += 1) {
+        auto string = arguments[i];
+        auto size = (Usize)strlen(string);
+        assert(size > 0);
+
+        if(string[0] == '-') {
+            if(size < 2) {
+                printf("Invalid argument '%s'\n", string);
+                return false;
+            }
+
+            if(string[1] == 'i') {
+                i += 1;
+                if(i >= argument_count) {
+                    printf("'-i' requires an argument.\n");
+                    return false;
+                }
+
+                auto path = arguments[i];
+                push(context.include_paths, intern(context.string_table, path));
+            }
+            else if(string[1] == 'o') {
+                i += 1;
+                if(i >= argument_count) {
+                    printf("'-o' requires an argument.\n");
+                    return false;
+                }
+
+                auto path = arguments[i];
+                if(context.output_prefix != 0) {
+                    printf("Error: Output prefix ('-o') provided multiple times.\n");
+                    return false;
+                }
+
+                context.output_prefix = intern(context.string_table, path);
+            }
+            else {
+                printf("Invalid argument '%s'\n", string);
+                return false;
+            }
+        }
+        else {
+            auto source = Source {};
+            source.file_path = intern(context.string_table, string);
+            push(context.sources, source);
+        }
+    }
+
+    if(context.include_paths.count == 0) {
+        push(context.include_paths, context.strings.dot);
+    }
+
+    if(context.output_prefix == 0) {
+        context.output_prefix = intern(context.string_table, STRING("wsc-output"));
+    }
+
+
+    return true;
+}
+
+bool read_sources() {
+    for(Usize i = 0; i < context.sources.count; i += 1) {
+        auto &source = context.sources[i];
+
+        auto name = context.string_table[source.file_path];
+        auto path = find_first_file(context.include_paths, name);
+        if(path == 0) {
+            printf("Error: Could not find file %s.\n", name.values);
+            return false;
+        }
+
+        auto path_string = context.string_table[path].values;
+        auto buffer = create_array<U8>(context.arena);
+        if(!read_entire_file((char *)path_string, buffer)) {
+            printf("Error: reading file %s\n", path_string);
+            return false;
+        }
+
+        source.file_path = path;
+        source.content = buffer;
+    }
+
+    return true;
 }
 
