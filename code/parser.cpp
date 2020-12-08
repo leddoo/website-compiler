@@ -109,6 +109,11 @@ static bool tokenize(
 
         token.source_size = (Unsigned)(reader.current - token_begin);
         push(result, token);
+
+        if(token.type == TOKEN_NUMBER && token.source_size > 10) {
+            printf("Error: Number is too large.\n");
+            return false;
+        }
     }
 
     // NOTE(llw): Extra tokens for lookahead.

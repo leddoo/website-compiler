@@ -183,3 +183,35 @@ Interned_String find_first_file(
     return 0;
 }
 
+
+bool parse_int_maybe(String string, U64 &result) {
+    if(string.size < 1) {
+        return false;
+    }
+
+    result = 0;
+
+    for(Usize i = 0; i < string.size; i += 1) {
+        auto at = string.values[i];
+        if(!is_numeric(at)) {
+            return false;
+        }
+
+        auto new_result = 10*result + (at - '0');
+        if(new_result < result) {
+            return false;
+        }
+
+        result = new_result;
+    }
+
+    return true;
+}
+
+U64 parse_int(String string) {
+    U64 result;
+    auto ok = parse_int_maybe(string, result);
+    assert(ok);
+    return result;
+}
+

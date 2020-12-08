@@ -30,7 +30,7 @@ extern struct Context {
             body, type, value, styles,
             desktop, mobile,
             page, title, icon, style_sheets, scripts,
-            text, div,
+            text, div, list,
             h1, p, span,
             parameters,
             form,

@@ -63,6 +63,7 @@ void setup_context() {
 
     strings.text   = intern(table, STRING("text"));
     strings.div    = intern(table, STRING("div"));
+    strings.list   = intern(table, STRING("list"));
 
     strings.h1   = intern(table, STRING("h1"));
     strings.p    = intern(table, STRING("p"));

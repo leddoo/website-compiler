@@ -145,3 +145,33 @@
     },
 )
 
+(div
+    defines: "list_item",
+    body: {
+        (label for: "name", body: { "Name" })
+        (input
+            id: "name",
+            type: "text",
+        )
+
+        (label for: "email", body: { "E-Mail" })
+        (input
+            id: "email",
+            type: "email",
+        )
+    },
+)
+
+(page
+    defines: "lists",
+    body: {
+        (list
+            id: "list",
+            type: "list_item",
+            initial: 1,
+            min: 1,
+            max: 5,
+        )
+    },
+)
+

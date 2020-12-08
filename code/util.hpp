@@ -127,3 +127,7 @@ Interned_String find_first_file(
     String file_name
 );
 
+
+bool parse_int_maybe(String string, U64 &result);
+U64 parse_int(String string);
+

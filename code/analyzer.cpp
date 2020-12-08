@@ -2,6 +2,7 @@
 #include "context.hpp"
 
 #include "stdio.h"
+#include <limits>
 
 _inline bool is_definition(const Expression &expr) {
     auto result = has(expr.arguments, context.strings.defines);
@@ -284,6 +285,73 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             return false;
         }
 
+    }
+    // NOTE(llw): list.
+    else if(expr.type == context.strings.list) {
+
+        if(id == NULL) {
+            printf("Error: Lists need an id.\n");
+            return false;
+        }
+
+        if(body != NULL) {
+            printf("Error: Lists cannot have a body.\n");
+            return false;
+        }
+
+        auto type    = get_pointer(args, context.strings.type);
+        auto initial = get_pointer(args, context.strings.initial);
+        auto min     = get_pointer(args, context.strings.min);
+        auto max     = get_pointer(args, context.strings.max);
+
+        if(    !validate_arg_type_p(context.strings.type,    ARG_STRING, true, type)
+            || !validate_arg_type_p(context.strings.initial, ARG_NUMBER, false, initial)
+            || !validate_arg_type_p(context.strings.min,     ARG_NUMBER, false, min)
+            || !validate_arg_type_p(context.strings.max,     ARG_NUMBER, false, max)
+        ) {
+            return false;
+        }
+
+
+        // NOTE(llw): Existence.
+        auto symbol = get_pointer(context.symbols, type->value);
+        if(symbol == NULL) {
+            printf("Error: Referenced symbol does not exist.\n");
+            return false;
+        }
+
+        // NOTE(llw): Type.
+        if(symbol->expression->type == context.strings.page) {
+            printf("Error: List type cannot be a page..\n");
+            return false;
+        }
+
+        // NOTE(llw): Concrete.
+        if(!is_concrete(*symbol->expression)) {
+            printf("Error: List type must be concrete.\n");
+            return false;
+        }
+
+
+        // NOTE(llw): min <= initial <= max.
+        F64 initial_val = 0.0;
+        F64 min_val     = -std::numeric_limits<F64>::infinity();
+        F64 max_val     = +std::numeric_limits<F64>::infinity();
+
+        if(initial != NULL) {
+            initial_val = (F64)parse_int(context.string_table[initial->value]);
+        }
+        if(min != NULL) {
+            min_val = (F64)parse_int(context.string_table[min->value]);
+        }
+        if(max != NULL) {
+            max_val = (F64)parse_int(context.string_table[max->value]);
+        }
+
+        if(initial_val < min_val || initial_val > max_val) {
+            printf("Error: List initial out of bounds.\n");
+            return false;
+        }
     }
     // NOTE(llw): label.
     else if(expr.type == context.strings.label) {
