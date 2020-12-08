@@ -159,12 +159,6 @@ Interned_String intern(String_Table &table, const char *string) {
     return result;
 }
 
-_inline U8 last(const String &string) {
-    assert(string.size > 0);
-    auto result = string.values[string.size - 1];
-    return result;
-}
-
 Interned_String find_first_file(
     const Array<Interned_String> &include_paths,
     String file_name
@@ -175,9 +169,6 @@ Interned_String find_first_file(
 
         auto prefix = context.string_table[include_paths[i]];
         push(buffer, prefix);
-        if(last(prefix) != '\\' && last(prefix) != '/') {
-            push(buffer, STRING("/"));
-        }
         push(buffer, file_name);
 
         auto f = fopen((char *)buffer.values, "rb");

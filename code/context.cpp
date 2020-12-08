@@ -22,8 +22,9 @@ void setup_context() {
     context.symbols      = create_map<Interned_String, Symbol>(context.arena);
     context.exports      = { &context.arena };
 
-    context.sources = { &context.arena };
+    context.sources       = { &context.arena };
     context.include_paths = { &context.arena };
+    context.outputs       = { &context.arena };
 
     context.strings.empty_string = intern(context.string_table, STRING(""));
 
@@ -148,6 +149,26 @@ Interned_String make_full_id(Interned_String prefix, Interned_String id) {
     return result;
 }
 
+
+Interned_String intern_path(const char *string) {
+    auto size = strlen(string);
+    assert(size > 0);
+
+    auto last = string[size - 1];
+
+    if(last != '\\' && last != '/') {
+        TEMP_SCOPE(context.temporary);
+
+        auto buffer = create_array<U8>(context.temporary);
+        push(buffer, String { (U8 *)string, (Usize)size });
+        push(buffer, STRING("/"));
+        return intern(context.string_table, str(buffer));
+    }
+    else {
+        return intern(context.string_table, string);
+    }
+}
+
 bool parse_arguments(int argument_count, const char **arguments) {
     if(argument_count < 2) {
         printf("Usage: %s [options] sources", arguments[0]);
@@ -156,7 +177,7 @@ bool parse_arguments(int argument_count, const char **arguments) {
 
     for(int i = 1; i < argument_count; i += 1) {
         auto string = arguments[i];
-        auto size = (Usize)strlen(string);
+        auto size   = strlen(string);
         assert(size > 0);
 
         if(string[0] == '-') {
@@ -173,7 +194,7 @@ bool parse_arguments(int argument_count, const char **arguments) {
                 }
 
                 auto path = arguments[i];
-                push(context.include_paths, intern(context.string_table, path));
+                push(context.include_paths, intern_path(path));
             }
             else if(string[1] == 'o') {
                 i += 1;
@@ -188,7 +209,7 @@ bool parse_arguments(int argument_count, const char **arguments) {
                     return false;
                 }
 
-                context.output_prefix = intern(context.string_table, path);
+                context.output_prefix = intern_path(path);
             }
             else {
                 printf("Invalid argument '%s'\n", string);
@@ -203,13 +224,12 @@ bool parse_arguments(int argument_count, const char **arguments) {
     }
 
     if(context.include_paths.count == 0) {
-        push(context.include_paths, context.strings.dot);
+        push(context.include_paths, intern_path("."));
     }
 
     if(context.output_prefix == 0) {
-        context.output_prefix = intern(context.string_table, STRING("wsc-output"));
+        context.output_prefix = intern_path("wsc-output");
     }
-
 
     return true;
 }

@@ -9,16 +9,18 @@ static void do_indent(Array<U8> &buffer, Usize indent) {
 }
 
 
-static void write_file(Interned_String name, String extension, const Array<U8> &buffer) {
+static void add_output_file(Interned_String name, String extension, const Array<U8> &buffer) {
     TEMP_SCOPE(context.temporary);
 
     auto path = create_array<U8>(context.temporary);
-    push(path, STRING("build/"));
+    push(path, context.output_prefix);
     push(path, name);
     push(path, extension);
-    push(path, (U8)0);
 
-    write_entire_file((char *)path.values, buffer);
+    auto source = Source {};
+    source.file_path = intern(context.string_table, str(path));
+    source.content = buffer;
+    push(context.outputs, source);
 }
 
 static Array<U8> generate_html(const Expression &page);
@@ -39,7 +41,7 @@ void codegen() {
 
         if(expr.type == context.strings.page) {
             auto html = generate_html(expr);
-            write_file(defines, STRING(".html"), html);
+            add_output_file(defines, STRING(".html"), html);
         }
         else {
             push(instantiate_js, STRING("function make_"));
@@ -61,7 +63,7 @@ void codegen() {
         }
     }
 
-    write_file(
+    add_output_file(
         intern(context.string_table, STRING("instantiate")),
         STRING(".js"),
         instantiate_js

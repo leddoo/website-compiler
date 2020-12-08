@@ -56,6 +56,7 @@ extern struct Context {
     Array<Source> sources;
     Array<Interned_String> include_paths;
     Interned_String output_prefix;
+    Array<Source> outputs;
 
 } context;
 
