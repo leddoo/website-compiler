@@ -25,6 +25,7 @@ void setup_context() {
     context.sources       = { &context.arena };
     context.include_paths = { &context.arena };
     context.outputs       = { &context.arena };
+    context.referenced_files.allocator = &context.arena;
 
     context.strings.empty_string = intern(context.string_table, STRING(""));
 

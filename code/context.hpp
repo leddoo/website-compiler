@@ -57,6 +57,7 @@ extern struct Context {
     Array<Interned_String> include_paths;
     Interned_String output_prefix;
     Array<Source> outputs;
+    Map<Interned_String, int> referenced_files;
 
 } context;
 

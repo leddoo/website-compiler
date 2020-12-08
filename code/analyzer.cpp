@@ -774,6 +774,25 @@ static Expression *instantiate(const Expression &expr) {
         return NULL;
     }
 
+    // NOTE(llw): Collect referenced files.
+    if(result->type == context.strings.page) {
+        auto style_sheets = get_pointer(result->arguments, context.strings.style_sheets);
+        if(style_sheets) {
+            const auto &list = style_sheets->list;
+            for(Usize i = 0; i < list.count; i += 1) {
+                insert_maybe(context.referenced_files, list[i].value, 0);
+            }
+        }
+
+        auto scripts = get_pointer(result->arguments, context.strings.scripts);
+        if(scripts) {
+            const auto &list = scripts->list;
+            for(Usize i = 0; i < list.count; i += 1) {
+                insert_maybe(context.referenced_files, list[i].value, 0);
+            }
+        }
+    }
+
     // NOTE(llw): Add default scripts.
     if(result->type == context.strings.page) {
         auto default_scripts = create_argument(ARG_LIST, context.arena);
