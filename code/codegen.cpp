@@ -184,6 +184,10 @@ static void generate_html(
     else if(expr.type == context.strings.form) {
         write_simple_element(context.strings.form);
     }
+    else if(expr.type == context.strings.list) {
+        write_simple_element(context.strings.div);
+        // TODO(llw): Setup code.
+    }
     else if(expr.type == context.strings.label) {
         auto _for = get_pointer(args, context.strings._for);
 
@@ -399,13 +403,6 @@ static void generate_instantiation_js(
         do_indent(buffer, indent);
         push(buffer, STRING("my_dom_parent.append(dom);\n"));
 
-        if(id != NULL) {
-            do_indent(buffer, indent);
-            push(buffer, STRING("dom.id = my_tree_parent.tn_dom.id + \"-"));
-            push(buffer, identifier);
-            push(buffer, STRING("\";\n"));
-        }
-
         auto styles = get_pointer(args, context.strings.styles);
         if(styles != NULL) {
             const auto &list = styles->list;
@@ -461,6 +458,9 @@ static void generate_instantiation_js(
     }
     else if(expr.type == context.strings.form) {
         write_simple_element(STRING("form"));
+    }
+    else if(expr.type == context.strings.list) {
+        // TODO(llw): Implement.
     }
     else if(expr.type == context.strings.label) {
         auto _for = get_pointer(args, context.strings._for);
