@@ -4,69 +4,39 @@ function is_dom_element(e) {
 
 // NOTE(llw): Result is added to the tree. Dom is not added to the dom.
 class Tree_Node {
-    constructor(parent, dom, name, type) {
-        this.Parent = parent || null;
-        this.Dom    = dom;
-        this.Name   = name;
-        this.Type   = type || null;
+    constructor(parent, dom, name) {
+        this.tn_parent = parent || null;
+        this.tn_dom    = dom;
+        this.tn_name   = name;
 
         console.assert(!('tree_node' in dom));
         dom.tree_node = this;
 
         if(parent) {
-            console.assert(!(name in parent), name + " already in " + parent.Name);
+            console.assert(!(name in parent), name + " already in " + parent.tn_name);
             parent[name] = this;
         }
     }
-}
 
 
-function tn_remove(me) {
-    tn_remove_child(me.Parent, me.Name);
-}
-
-function tn_remove_child_maybe(me, x) {
-    if(typeof x === "string") {
-        console.assert(me instanceof Tree_Node);
-
-        let name = x;
-        if(!(name in me)) {
-            return false;
-        }
-
-        // NOTE(llw): Remove from dom. (Parent may not be me.Dom!)
-        let dom = me[name].Dom;
-        dom.parentNode.removeChild(dom);
+    tn_remove() {
+        // NOTE(llw): Remove from dom.
+        this.tn_dom.parentNode.removeChild(this.tn_dom);
 
         // NOTE(llw): Remove from tree.
-        delete me[name];
-
-        return true;
-    }
-    else if(x instanceof Tree_Node) {
-        return tn_remove_child_maybe(me, x.Name);
+        delete this.tn_parent[this.tn_name];
     }
 
-    console.assert(false);
-    return false;
-}
+    tn_add_wrapper(name) {
+        console.assert(typeof name === "string");
 
-function tn_remove_child(me, x) {
-    let removed = tn_remove_child_maybe(me, x);
-    console.assert(removed);
-}
+        let div = document.createElement("div");
+        div.id = this.tn_dom.id + "-" + name;
 
+        let node = new Tree_Node(this, div, name);
+        this.tn_dom.append(div);
 
-function tn_add_wrapper(me, name) {
-    console.assert(me instanceof Tree_Node);
-    console.assert(typeof name === "string");
-
-    let div = document.createElement("div");
-    div.id = me.Dom.id + "-" + name;
-
-    let node = new Tree_Node(me, div, name, "TBD");
-    me.Dom.append(div);
-
-    return node;
+        return node;
+    }
 }
 

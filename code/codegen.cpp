@@ -44,15 +44,15 @@ void codegen() {
             add_output_file(defines, STRING(".html"), html);
         }
         else {
-            push(instantiate_js, STRING("function make_"));
+            push(instantiate_js, STRING("function tn_make_"));
             push(instantiate_js, defines);
             push(instantiate_js, STRING("(parent) {\n"));
 
             do_indent(instantiate_js, 1);
-            push(instantiate_js, STRING("console.assert(parent.Dom.id != \"\");\n\n"));
+            push(instantiate_js, STRING("console.assert(parent.tn_dom.id != \"\");\n\n"));
 
             do_indent(instantiate_js, 1);
-            push(instantiate_js, STRING("let dom = parent.Dom;\n"));
+            push(instantiate_js, STRING("let dom = parent.tn_dom;\n"));
 
             do_indent(instantiate_js, 1);
             push(instantiate_js, STRING("let me  = parent;\n"));
@@ -118,7 +118,7 @@ static void generate_html(
         push(init_js, full_id);
         push(init_js, STRING("\"), \""));
         push(init_js, identifier);
-        push(init_js, STRING("\", \"TBD\");\n"));
+        push(init_js, STRING("\");\n"));
     }
 
     auto styles_string = create_array<U8>(context.temporary);
@@ -312,7 +312,7 @@ static Array<U8> generate_html(const Expression &page) {
 
     do_indent(init_js, 3);
     push(init_js, STRING(
-        "let me = new Tree_Node(null, document.getElementById(\"page\"), \"page\", \"Page\");\n"
+        "let me = new Tree_Node(null, document.getElementById(\"page\"), \"page\");\n"
     ));
     do_indent(init_js, 3);
     push(init_js, STRING("window.page = me;\n"));
@@ -401,7 +401,7 @@ static void generate_instantiation_js(
 
         if(id != NULL) {
             do_indent(buffer, indent);
-            push(buffer, STRING("dom.id = my_tree_parent.Dom.id + \"-"));
+            push(buffer, STRING("dom.id = my_tree_parent.tn_dom.id + \"-"));
             push(buffer, identifier);
             push(buffer, STRING("\";\n"));
         }
@@ -425,7 +425,7 @@ static void generate_instantiation_js(
             do_indent(buffer, indent);
             push(buffer, STRING("let me = new Tree_Node(my_tree_parent, dom, \""));
             push(buffer, identifier);
-            push(buffer, STRING("\", \"TBD\");\n"));
+            push(buffer, STRING("\");\n"));
         }
         else {
             do_indent(buffer, indent);
@@ -478,7 +478,7 @@ static void generate_instantiation_js(
                 push(buffer, STRING("dom.htmlFor = \"page-"));
             }
             else {
-                push(buffer, STRING("dom.htmlFor = my_tree_parent.Dom.id + \"-"));
+                push(buffer, STRING("dom.htmlFor = my_tree_parent.tn_dom.id + \"-"));
             }
             push(buffer, ident);
             push(buffer, STRING("\";\n"));
