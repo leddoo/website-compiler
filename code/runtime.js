@@ -62,7 +62,7 @@ function tn_add_wrapper(me, name) {
     console.assert(typeof name === "string");
 
     let div = document.createElement("div");
-    div.id = me.Dom.id + "." + name;
+    div.id = me.Dom.id + "-" + name;
 
     let node = new Tree_Node(me, div, name, "TBD");
     me.Dom.append(div);

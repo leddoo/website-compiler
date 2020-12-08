@@ -399,7 +399,7 @@ static void generate_instantiation_js(
 
         if(id != NULL) {
             do_indent(buffer, indent);
-            push(buffer, STRING("dom.id = my_tree_parent.Dom.id + \"."));
+            push(buffer, STRING("dom.id = my_tree_parent.Dom.id + \"-"));
             push(buffer, identifier);
             push(buffer, STRING("\";\n"));
         }
@@ -473,10 +473,10 @@ static void generate_instantiation_js(
 
             do_indent(buffer, indent);
             if(global) {
-                push(buffer, STRING("dom.htmlFor = \"page."));
+                push(buffer, STRING("dom.htmlFor = \"page-"));
             }
             else {
-                push(buffer, STRING("dom.htmlFor = my_tree_parent.Dom.id + \"."));
+                push(buffer, STRING("dom.htmlFor = my_tree_parent.Dom.id + \"-"));
             }
             push(buffer, ident);
             push(buffer, STRING("\";\n"));

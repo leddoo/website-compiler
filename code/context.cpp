@@ -120,12 +120,12 @@ Interned_String make_full_id(Interned_String prefix, String id, bool is_global) 
         auto buffer = create_array<U8>(context.temporary);
 
         if(is_global) {
-            push(buffer, STRING("page."));
+            push(buffer, STRING("page-"));
             push(buffer, id);
         }
         else {
             push(buffer, prefix);
-            push(buffer, STRING("."));
+            push(buffer, STRING("-"));
             push(buffer, id);
         }
 
