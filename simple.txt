@@ -1,177 +1,178 @@
 (page
-    defines: "simple",
-    body: {},
+    defines: "simple"
+    body: {}
 )
 
 (page
-    defines: "empty",
-    body: { foo },
-    parameters: [ foo ],
+    defines: "empty"
+    body: { foo }
+    parameters: [ foo ]
 )
 
 (page
-    defines: "error",
-    inherits: "empty",
-    foo: { span body: { "foo" } },
+    defines: "error"
+    inherits: "empty"
+    foo: { span body: { "foo" } }
 )
 
 (page
-    defines: "root",
-    parameters: [ content, foo ],
+    defines: "root"
+    parameters: [ content, foo ]
     body: {
         content
         h1 body: { "finally" }
         span body: { foo }
-    },
+    }
 )
 
 (page
-    defines: "template",
-    inherits: "root",
-    parameters: [ content, bar ],
-    title: "template",
-    icon: "base_icon.ico",
-    style_sheets: [ "main.css" ],
-    scripts: [ "main.js" ],
+    defines: "template"
+    inherits: "root"
+    parameters: [ content, bar ]
+    title: "template"
+    icon: "base_icon.ico"
+    style_sheets: [ "main.css" ]
+    scripts: [ "main.js" ]
     content: {
         h1 body: { "header" }
         content
         h1 body: { "footer" }
         bar
-    },
-    foo: { "foo as text" },
+    }
+    foo: { "foo as text" }
 )
 
 (page
-    defines: "reservierung",
-    inherits: "template",
-    title: "Reservierung",
-    style_sheets: [ "register.css" ],
-    scripts: [ "register.js" ],
+    defines: "reservierung"
+    inherits: "template"
+    title: "Reservierung"
+    style_sheets: [ "register.css" ]
+    scripts: [ "register.js" ]
     content: {
         h1 id: "foo", body: { "Title" }
         div id: "yeet", body: {
             p id: "#bar", body: { "Have a paragraph!" }
             p id: "bar",  body: { "And another one." }
         }
-    },
-    bar: {},
+    }
+    bar: {}
 )
 
 
 (div
-    defines: "wrapper",
-    parameters: [ expression ],
+    defines: "wrapper"
+    parameters: [ expression ]
     body: {
         expression
-    },
+    }
 )
 
 (form
-    defines: "yay_forms",
+    defines: "yay_forms"
     body: {
         (label for: "name", body: { "Name" })
         (input
-            id: "name",
-            type: "text",
-            min: 1,
-            max: 3,
-            initial: "hi",
+            id: "name"
+            type: "text"
+            min: 1
+            max: 3
+            initial: "hi"
         )
         (label for: "email", body: { "E-Mail" })
         (input
-            id: "email",
-            type: "email",
-            min: 1,
-            max: 128,
-            initial: "a@b",
+            id: "email"
+            type: "email"
+            min: 1
+            max: 128
+            initial: "a@b"
         )
 
         div styles: [ "desktop", "spacer_4" ]
         div styles: [ "mobile",  "spacer_3" ]
-    },
+    }
 )
 
 (div
-    defines: "instantiate_me",
+    defines: "instantiate_me"
     body: {
         (div
-            id: "hey_man",
-            inherits: "wrapper",
+            id: "hey_man"
+            inherits: "wrapper"
             expression: {
                 span body: { "hi" }
-            },
+            }
         )
         label for: "#yay"
         div id: "#yay"
 
         label for: "foo"
         h1 id: "foo", body: { "Title" }
-    },
+    }
 )
 
 (page
-    defines: "forms",
+    defines: "forms"
     body: {
         div id: "test", inherits: "wrapper", expression: { div body: { div id: "hi" } }
         div inherits: "wrapper", expression: {}, body: {}
 
         form inherits: "yay_forms"
-    },
+    }
 )
 
 
 
 (div
-    defines: "x0",
-    id: "x0",
-    parameters: [ foo ],
-    body: { foo },
-    styles: [ "x0" ],
+    defines: "x0"
+    id: "x0"
+    parameters: [ foo ]
+    body: { foo }
+    styles: [ "x0" ]
 )
 
 (div
-    defines: "x1",
-    id: "x1",
-    inherits: "x0",
-    foo: { "hi" },
-    styles: [ "x1" ],
+    defines: "x1"
+    id: "x1"
+    inherits: "x0"
+    foo: { "hi" }
+    styles: [ "x1" ]
 )
 
 (page
-    defines: "inheritance_test",
+    defines: "inheritance_test"
     body: {
         div inherits: "x1"
-    },
+    }
 )
 
+
 (div
-    defines: "list_item",
+    defines: "list_item"
     body: {
         (label for: "name", body: { "Name" })
         (input
-            id: "name",
-            type: "text",
+            id: "name"
+            type: "text"
         )
 
         (label for: "email", body: { "E-Mail" })
         (input
-            id: "email",
-            type: "email",
+            id: "email"
+            type: "email"
         )
-    },
+    }
 )
 
 (page
-    defines: "lists",
+    defines: "lists"
     body: {
         (list
-            id: "list",
-            type: "list_item",
-            initial: 1,
-            min: 1,
-            max: 5,
+            id: "list"
+            type: "list_item"
+            initial: 1
+            min: 1
+            max: 5
         )
-    },
+    }
 )
 

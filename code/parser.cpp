@@ -384,11 +384,17 @@ Expression parse_expression(Reader<Token> &reader) {
         }
         insert(arguments, arg_name, arg);
 
-        // NOTE(llw): Try to consume ','.
-        if(    reader.current < reader.end
-            && reader.current->string == context.strings.comma
-        ) {
-            reader.current += 1;
+        // NOTE(llw): Try to consume ',' or '\n'.
+        if(reader.current < reader.end) {
+            if(reader.current->string == context.strings.comma) {
+                reader.current += 1;
+            }
+            else if(is_multi_line && reader.current->type == TOKEN_EOL) {
+                reader.current += 1;
+            }
+            else {
+                was_last = true;
+            }
         }
         else {
             was_last = true;
