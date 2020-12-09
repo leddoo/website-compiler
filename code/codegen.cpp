@@ -186,7 +186,6 @@ static void generate_html(
     }
     else if(expr.type == context.strings.list) {
         write_simple_element(context.strings.div);
-        // TODO(llw): Setup code.
     }
     else if(expr.type == context.strings.label) {
         auto _for = get_pointer(args, context.strings._for);
@@ -237,6 +236,28 @@ static void generate_html(
         assert(false);
     }
 
+
+    if(expr.type == context.strings.list) {
+        auto type_string = args[context.strings.type].value;
+        auto min_string  = intern(context.string_table, STRING("-Infinity"));
+        auto max_string  = intern(context.string_table, STRING("+Infinity"));
+
+        auto min = get_pointer(args, context.strings.min);
+        if(min != NULL) { min_string = min->value; }
+
+        auto max = get_pointer(args, context.strings.max);
+        if(max != NULL) { max_string = max->value; }
+
+        do_indent(init_js, init_js_indent);
+        push(init_js, STRING("me.tn_listify("));
+        push(init_js, STRING("tn_make_"));
+        push(init_js, type_string);
+        push(init_js, STRING(", "));
+        push(init_js, min_string);
+        push(init_js, STRING(", "));
+        push(init_js, max_string);
+        push(init_js, STRING(");\n"));
+    }
 
     if(full_id != 0) {
         // NOTE(llw): id setup code 2/2.
@@ -460,7 +481,53 @@ static void generate_instantiation_js(
         write_simple_element(STRING("form"));
     }
     else if(expr.type == context.strings.list) {
-        // TODO(llw): Implement.
+        auto type_string = args[context.strings.type].value;
+
+        write_parent_variables();
+        begin_element();
+
+        write_create_dom(STRING("div"));
+        write_create_tree_node();
+
+        // NOTE(llw): listify.
+        do_indent(buffer, indent);
+        push(buffer, STRING("me.tn_listify("));
+        push(buffer, STRING("tn_make_"));
+        push(buffer, type_string);
+        push(buffer, STRING(", -Infinity, +Infinity);\n"));
+
+        // NOTE(llw): initial.
+        auto initial = get_pointer(args, context.strings.initial);
+        if(initial) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("for(let i = 0; i < "));
+            push(buffer, initial->value);
+            push(buffer, STRING("; i += 1) {\n"));
+
+            do_indent(buffer, indent + 1);
+            push(buffer, STRING("me.tn_list_insert_new();\n"));
+
+            do_indent(buffer, indent);
+            push(buffer, STRING("}\n"));
+        }
+
+        auto min = get_pointer(args, context.strings.min);
+        if(min != NULL) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("me.tn_list_min = "));
+            push(buffer, min->value);
+            push(buffer, STRING(";\n"));
+        }
+
+        auto max = get_pointer(args, context.strings.max);
+        if(max != NULL) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("me.tn_list_max = "));
+            push(buffer, max->value);
+            push(buffer, STRING(";\n"));
+        }
+
+        end_element();
     }
     else if(expr.type == context.strings.label) {
         auto _for = get_pointer(args, context.strings._for);

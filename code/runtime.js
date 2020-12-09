@@ -6,6 +6,8 @@ class Tree_Node {
 
     // NOTE(llw): "dom" is to be put into the browser dom by the caller.
     constructor(parent, dom, name) {
+        console.assert(is_dom_element(dom));
+
         this.tn_parent = parent || null;
         this.tn_dom    = dom;
         this.tn_name   = name;
@@ -22,7 +24,7 @@ class Tree_Node {
     tn_remove() {
         console.assert(
                typeof this.tn_name === "string"
-            || this.tn_remove === Tree_Node.prototype._tn_list_remove
+            || typeof this.tn_name === "number" && this.tn_parent.tn_is_list
         );
 
         // NOTE(llw): Remove from dom.
@@ -34,7 +36,10 @@ class Tree_Node {
 
 
     tn_add_wrapper(name) {
-        console.assert(typeof name === "string" || typeof name === "number");
+        console.assert(
+               typeof name === "string"
+            || typeof name === "number" && this.tn_is_list
+        );
 
         let div = document.createElement("div");
         div.id = this.tn_dom.id + "-" + name;
@@ -48,6 +53,11 @@ class Tree_Node {
 
     tn_set_name(name) {
         console.assert(
+               typeof name === "string"
+            || typeof name === "number" && this.tn_parent.tn_is_list
+        );
+
+        console.assert(
                !(name in this.tn_parent)
             || this.tn_parent[name] === this,
             "Error: " + name + " already in " + this.tn_parent.tn_dom.id
@@ -60,9 +70,40 @@ class Tree_Node {
     }
 
 
-    tn_list_insert_new(at) {
-        console.assert("tn_list_count" in this);
 
+    tn_listify(make_entry, min, max) {
+        console.assert(!this.tn_is_list);
+
+        console.assert(typeof make_entry === "function");
+        console.assert(typeof min === "number");
+        console.assert(typeof max === "number");
+
+        this.tn_list_min   = min;
+        this.tn_list_max   = max;
+        this.tn_list_count = 0;
+
+        this.tn_list_insert_new = Tree_Node.prototype._tn_list_insert_new;
+        this._tn_list_make_entry = make_entry;
+
+        this.tn_is_list = true;
+
+        // NOTE(llw): Update children's tn_remove.
+        for(let i = 0; i in this; i += 1) {
+            console.assert(this[i] instanceof Tree_Node);
+
+            this[i].tn_remove = Tree_Node.prototype._tn_list_remove;
+            this.tn_list_count += 1;
+        }
+
+        console.assert(min <= this.tn_list_count);
+        console.assert(max >= this.tn_list_count);
+    }
+
+    _tn_list_insert_new(at) {
+        console.assert(this.tn_is_list);
+        console.assert(this.tn_list_count < this.tn_list_max);
+
+        // NOTE(llw): Default is append.
         if(at === undefined) {
             at = this.tn_list_count;
         }
@@ -79,7 +120,7 @@ class Tree_Node {
         // NOTE(llw): Instantiate new element.
         let wrapper = this.tn_add_wrapper(at);
         wrapper.tn_remove = Tree_Node.prototype._tn_list_remove;
-        this._tn_list_make_new(wrapper);
+        this._tn_list_make_entry(wrapper);
 
         // NOTE(llw): Move to right place in dom.
         if(at + 1 < this.tn_list_count) {
@@ -88,7 +129,8 @@ class Tree_Node {
     }
 
     _tn_list_remove() {
-        console.assert("tn_list_count" in this.tn_parent);
+        console.assert(this.tn_parent.tn_is_list);
+        console.assert(this.tn_parent.tn_list_count > this.tn_parent.tn_list_min);
         console.assert(typeof this.tn_name === "number");
 
         let list = this.tn_parent;
