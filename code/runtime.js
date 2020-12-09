@@ -92,6 +92,8 @@ class Tree_Node {
             console.assert(this[i] instanceof Tree_Node);
 
             this[i].tn_remove = Tree_Node.prototype._tn_list_remove;
+            this[i].tn_name = i;
+
             this.tn_list_count += 1;
         }
 

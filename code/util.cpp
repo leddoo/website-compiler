@@ -215,3 +215,22 @@ U64 parse_int(String string) {
     return result;
 }
 
+void serialize_int(U64 value, Array<U8> &buffer) {
+    clear(buffer);
+    reserve(buffer, 20);
+
+    if(value == 0) {
+        push(buffer, (U8)'0');
+        return;
+    }
+
+    while(value != 0) {
+        auto digit = value % 10;
+        value      = value / 10;
+
+        push(buffer, (U8)('0' + (char)digit));
+    }
+
+    reverse(buffer);
+}
+

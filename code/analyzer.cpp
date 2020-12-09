@@ -829,6 +829,84 @@ static bool instantiate(
     return true;
 }
 
+static bool add_list_initials(Expression &expr) {
+    auto &args = expr.arguments;
+
+    // NOTE(llw): Recurse.
+    auto body = get_pointer(args, context.strings.body);
+    if(body != NULL) {
+        assert(body->type == ARG_BLOCK);
+
+        auto &block = body->block;
+        for(Usize i = 0; i < block.count; i += 1) {
+            if(!add_list_initials(block[i])) {
+                return false;
+            }
+        }
+    }
+
+    // NOTE(llw): Skip non-lists.
+    if(expr.type != context.strings.list) {
+        return true;
+    }
+
+    // NOTE(llw): Skip definitions.
+    if(has(args, context.strings.defines)) {
+        return true;
+    }
+
+    auto initial = get_pointer(args, context.strings.initial);
+    if(initial == NULL) {
+        return true;
+    }
+
+    auto count = parse_int(context.string_table[initial->value]);
+    if(count == 0) {
+        return true;
+    }
+
+    auto symbol_name = args[context.strings.type].value;
+    const auto &type = *context.symbols[symbol_name].expression;
+
+    auto list_body = create_argument(ARG_BLOCK, context.arena);
+    reserve(list_body.block, count);
+
+    for(Usize i = 0; i < count; i += 1) {
+        // NOTE(llw): Build body.
+        auto instance = duplicate(type, context.arena);
+        if(!instantiate(NULL, instance)) {
+            return false;
+        }
+
+        auto body = create_argument(ARG_BLOCK, context.arena);
+        reserve(body.block, 1);
+        push(body.block, instance);
+
+        // NOTE(llw): Build id.
+        TEMP_SCOPE(context.temporary);
+        auto index_string = create_array<U8>(context.temporary);
+        serialize_int(i, index_string);
+
+        auto id = Argument {};
+        id.type = ARG_STRING;
+        id.value = intern(context.string_table, str(index_string));
+
+        // NOTE(llw): Build wrapper div.
+        auto div = Expression {};
+        div.type = context.strings.div;
+        div.arguments.allocator = &context.arena;
+
+        reserve(div.arguments, 2);
+        insert(div.arguments, context.strings.body, body);
+        insert(div.arguments, context.strings.id,   id);
+
+        push(list_body.block, div);
+    }
+    insert(args, context.strings.body, list_body);
+
+    return true;
+}
+
 static Expression *instantiate(const Expression &expr) {
     auto result = allocate<Expression>(context.arena);
     *result = duplicate(expr, context.arena);
@@ -842,6 +920,10 @@ static Expression *instantiate(const Expression &expr) {
     auto symbol = Symbol {};
     symbol.expression = result;
     if(!validate(symbol)) {
+        return NULL;
+    }
+
+    if(!add_list_initials(*result)) {
         return NULL;
     }
 

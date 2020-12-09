@@ -131,3 +131,5 @@ Interned_String find_first_file(
 bool parse_int_maybe(String string, U64 &result);
 U64 parse_int(String string);
 
+void serialize_int(U64 value, Array<U8> &buffer);
+
