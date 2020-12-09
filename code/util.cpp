@@ -170,6 +170,7 @@ Interned_String find_first_file(
         auto prefix = context.string_table[include_paths[i]];
         push(buffer, prefix);
         push(buffer, file_name);
+        push(buffer, (U8)0);
 
         auto f = fopen((char *)buffer.values, "rb");
         if(f != NULL) {
