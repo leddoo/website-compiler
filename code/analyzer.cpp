@@ -353,6 +353,12 @@ static bool validate(const Expression &expr, Validate_Context vc) {
                 return false;
             }
         }
+        else {
+            use_arg(context.strings.type);
+            use_arg(context.strings.initial);
+            use_arg(context.strings.min);
+            use_arg(context.strings.max);
+        }
     }
     // NOTE(llw): select.
     else if(expr.type == context.strings.select) {
@@ -388,6 +394,9 @@ static bool validate(const Expression &expr, Validate_Context vc) {
                     return false;
                 }
             }
+        }
+        else {
+            use_arg(context.strings.options);
         }
     }
     // NOTE(llw): label.
