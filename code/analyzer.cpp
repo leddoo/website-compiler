@@ -451,6 +451,19 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             else if(type->value == context.strings.date) {
                 // ok.
             }
+            else if(type->value == context.strings.checkbox) {
+                if(!validate_arg_type_p(context.strings.initial, ARG_NUMBER, false, initial)) {
+                    return false;
+                }
+
+                if(initial != NULL) {
+                    auto value = context.string_table[initial->value];
+                    if(!eq(value, STRING("0")) && !eq(value, STRING("1"))) {
+                        printf("Error: Checkbox initial must be 0 or 1.\n");
+                        return false;
+                    }
+                }
+            }
             else {
                 printf("Invalid input type.\n");
                 return false;

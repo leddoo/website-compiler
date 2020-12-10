@@ -213,11 +213,19 @@
     type: "date"
 )
 
+(input
+    defines: "checkbox_input"
+    parameters: []
+    type: "checkbox"
+    initial: 1
+)
+
 (div
     defines: "new_inputs",
     body: {
         input id: "number", inherits: "number_input"
         input id: "date",   inherits: "date_input"
+        input id: "check",  inherits: "checkbox_input"
     }
 )
 

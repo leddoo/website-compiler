@@ -38,7 +38,7 @@ extern struct Context {
             label, input,
             _for,
             min, max, locked, initial,
-            email, number, date,
+            email, number, date, checkbox,
             select, option, options;
     } strings;
 

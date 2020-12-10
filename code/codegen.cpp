@@ -259,10 +259,18 @@ static void generate_html(
         push(html, STRING(" type=\""));
         push(html, type);
         push(html, STRING("\""));
-        if(initial) {
-            push(html, STRING(" value=\""));
-            push(html, initial->value);
-            push(html, STRING("\""));
+        if(initial != NULL) {
+            if(type != context.strings.checkbox) {
+                push(html, STRING(" value=\""));
+                push(html, initial->value);
+                push(html, STRING("\""));
+            }
+            else {
+                auto value = context.string_table[initial->value];
+                if(value.values[0] == '1') {
+                    push(html, STRING(" checked"));
+                }
+            }
         }
         push(html, STRING(">\n"));
     }
@@ -660,10 +668,18 @@ static void generate_instantiation_js(
         push(buffer, STRING("\";\n"));
 
         if(initial != NULL) {
-            do_indent(buffer, indent);
-            push(buffer, STRING("dom.value = \""));
-            push(buffer, initial->value);
-            push(buffer, STRING("\";\n"));
+            if(type != context.strings.checkbox) {
+                do_indent(buffer, indent);
+                push(buffer, STRING("dom.value = \""));
+                push(buffer, initial->value);
+                push(buffer, STRING("\";\n"));
+            }
+            else {
+                do_indent(buffer, indent);
+                push(buffer, STRING("dom.checked = "));
+                push(buffer, initial->value);
+                push(buffer, STRING(";\n"));
+            }
         }
 
         write_create_tree_node();
