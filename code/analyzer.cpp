@@ -227,20 +227,22 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     use_arg(context.strings.defines);
     use_arg(context.strings.parameters);
     use_arg(context.strings.inherits);
-    use_arg(context.strings.body);
-    use_arg(context.strings.id);
 
+    auto definition = defines != NULL;
     auto concrete = parameters == NULL && inherits == NULL;
+
+    auto supports_id   = false;
+    auto supports_body = false;
+    auto requires_id   = false;
+    auto requires_body = false;
 
 
     // NOTE(llw): Type specific validation.
 
     // NOTE(llw): page.
     if(expr.type == context.strings.page) {
-        if(id != NULL) {
-            printf("Error: Pages cannot have ids.\n");
-            return false;
-        }
+        supports_body = true;
+        requires_body = concrete;
 
         if(    !validate_arg_type(context.strings.title,        ARG_STRING, false)
             || !validate_arg_type(context.strings.icon,         ARG_STRING, false)
@@ -252,6 +254,8 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
     // NOTE(llw): div.
     else if(expr.type == context.strings.div) {
+        supports_id   = true;
+        supports_body = true;
 
         if(    defines  == NULL
             && inherits == NULL
@@ -266,6 +270,8 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
     // NOTE(llw): form.
     else if(expr.type == context.strings.form) {
+        supports_id   = true;
+        supports_body = true;
 
         if(expr.type == context.strings.form) {
             if(vc.in_form) {
@@ -288,18 +294,10 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
     // NOTE(llw): list.
     else if(expr.type == context.strings.list) {
-
-        if(body != NULL) {
-            printf("Error: Lists cannot have a body.\n");
-            return false;
-        }
+        supports_id = true;
+        requires_id = concrete;
 
         if(concrete) {
-
-            if(id == NULL) {
-                printf("Error: Lists need an id.\n");
-                return false;
-            }
 
             auto type    = get_pointer(args, context.strings.type);
             auto initial = get_pointer(args, context.strings.initial);
@@ -358,6 +356,9 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
     // NOTE(llw): label.
     else if(expr.type == context.strings.label) {
+        supports_id   = true;
+        supports_body = true;
+
         auto _for = get_pointer(args, context.strings._for);
         if(!validate_arg_type_p(context.strings._for, ARG_STRING, false, _for)) {
             return false;
@@ -370,10 +371,8 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
     // NOTE(llw): input.
     else if(expr.type == context.strings.input) {
-        if(id == NULL) {
-            printf("Error: input requires an id.\n");
-            return false;
-        }
+        supports_id = true;
+        requires_id = true;
 
         auto type    = get_pointer(args, context.strings.type);
         auto min     = get_pointer(args, context.strings.min);
@@ -402,18 +401,14 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
     // NOTE(llw): text.
     else if(expr.type == context.strings.text) {
-        if(id != NULL) {
-            printf("Error: 'text' expressions cannot have ids.\n");
-            return false;
-        }
-
         if(!validate_arg_type(context.strings.value, ARG_STRING, true)) {
             return false;
         }
     }
     // NOTE(llw): simple types.
     else if(has(context.simple_types, expr.type)) {
-        // ok.
+        supports_id   = true;
+        supports_body = true;
     }
     // NOTE(llw): Unknown.
     else {
@@ -425,8 +420,8 @@ static bool validate(const Expression &expr, Validate_Context vc) {
 
 
     // NOTE(llw): Definitions.
-    {
-        if(expr.parent != NULL && is_definition(expr)) {
+    if(definition) {
+        if(expr.parent != NULL) {
             printf("Error: Definitions cannot be nested.\n");
             return false;
         }
@@ -436,6 +431,12 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     // NOTE(llw): Validate id.
     auto full_id = Interned_String {};
     if(id != NULL) {
+        if(!supports_id) {
+            printf("Error: Id not supported.\n");
+            return false;
+        }
+
+        use_arg(context.strings.id);
 
         if(    id->type != ARG_STRING
             || id->value == context.strings.empty_string
@@ -461,6 +462,10 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             }
         }
 
+    }
+    else if(requires_id) {
+        printf("Error: Id required.\n");
+        return false;
     }
 
     // NOTE(llw): Validate parameters.
@@ -541,24 +546,35 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
 
     // NOTE(llw): Validate body.
-    if(concrete && body != NULL) {
-
-        if(body->type != ARG_BLOCK) {
-            printf("Error: Body must be a block.\n");
+    if(body != NULL) {
+        if(!supports_body) {
+            printf("Error: Body not supported.\n");
             return false;
         }
 
-        if(full_id) {
-            vc.id_prefix = full_id;
-        }
+        use_arg(context.strings.body);
 
-        const auto &block = body->block;
-        for(Usize i = 0; i < block.count; i += 1) {
-            if(!validate(block[i], vc)) {
+        if(concrete) {
+            if(body->type != ARG_BLOCK) {
+                printf("Error: Body must be a block.\n");
                 return false;
             }
-        }
 
+            if(full_id) {
+                vc.id_prefix = full_id;
+            }
+
+            const auto &block = body->block;
+            for(Usize i = 0; i < block.count; i += 1) {
+                if(!validate(block[i], vc)) {
+                    return false;
+                }
+            }
+        }
+    }
+    else if(requires_body) {
+        printf("Error: Body required.\n");
+        return false;
     }
 
 
