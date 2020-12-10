@@ -818,6 +818,10 @@ static bool insert_arguments(
     }
 }
 
+
+static bool instantiate_and_merge(Expression &reference, Interned_String inherits);
+static bool instantiate_body_references(Expression &expression);
+
 /* NOTE(llw):
     - Both reference and definition are modified!
     - Removes parameter values from reference and inserts them into definition.
@@ -832,47 +836,6 @@ static bool instantiate(
 ) {
     TEMP_SCOPE(context.temporary);
 
-    auto instantiate_and_merge = [](Expression &reference, Interned_String inherits) {
-        auto symbol = context.symbols[inherits];
-        auto instance = duplicate(*symbol.expression, context.arena);
-        if(!instantiate(&reference, instance)) {
-            return false;
-        }
-
-        auto &inst_args = instance.arguments;
-        auto &def_args  = reference.arguments;
-
-        // NOTE(llw): Remove defines/inherits.
-        remove(inst_args, context.strings.defines);
-        remove(def_args, context.strings.inherits);
-
-        // NOTE(llw): Merge.
-        for(Usize i = 0; i < inst_args.count; i += 1) {
-            auto name = inst_args.entries[i].key;
-            auto value = inst_args.entries[i].value;
-
-            if(    name == context.strings.style_sheets
-                || name == context.strings.scripts
-                || name == context.strings.classes
-                || name == context.strings.styles
-            ) {
-                auto &list = value.list;
-                auto def_values = get_pointer(def_args, name);
-                if(def_values) {
-                    push(list, def_values->list);
-                    def_values->list = list;
-                }
-                else {
-                    insert(def_args, name, value);
-                }
-            }
-            else {
-                insert_maybe(def_args, name, value);
-            }
-        }
-
-        return true;
-    };
 
     auto &args = definition.arguments;
 
@@ -903,20 +866,8 @@ static bool instantiate(
         }
     }
 
-    // NOTE(llw): Instantiate references in body.
-    auto body = get_pointer(args, context.strings.body);
-    if(body) {
-        auto &block = body->block;
-        for(Usize expr_index = 0; expr_index < block.count; expr_index += 1) {
-            auto &expr = block[expr_index];
-
-            auto inherits = get_pointer(expr.arguments, context.strings.inherits);
-            if(inherits != NULL) {
-                if(!instantiate_and_merge(expr, inherits->value)) {
-                    return false;
-                }
-            }
-        }
+    if(!instantiate_body_references(definition)) {
+        return false;
     }
 
     // NOTE(llw): Recurse.
@@ -929,6 +880,72 @@ static bool instantiate(
 
     return true;
 }
+
+static bool instantiate_and_merge(Expression &reference, Interned_String inherits) {
+    auto symbol = context.symbols[inherits];
+    auto instance = duplicate(*symbol.expression, context.arena);
+    if(!instantiate(&reference, instance)) {
+        return false;
+    }
+
+    auto &inst_args = instance.arguments;
+    auto &def_args  = reference.arguments;
+
+    // NOTE(llw): Remove defines/inherits.
+    remove(inst_args, context.strings.defines);
+    remove(def_args, context.strings.inherits);
+
+    // NOTE(llw): Merge.
+    for(Usize i = 0; i < inst_args.count; i += 1) {
+        auto name = inst_args.entries[i].key;
+        auto value = inst_args.entries[i].value;
+
+        if(    name == context.strings.style_sheets
+            || name == context.strings.scripts
+            || name == context.strings.classes
+            || name == context.strings.styles
+        ) {
+            auto &list = value.list;
+            auto def_values = get_pointer(def_args, name);
+            if(def_values) {
+                push(list, def_values->list);
+                def_values->list = list;
+            }
+            else {
+                insert(def_args, name, value);
+            }
+        }
+        else {
+            insert_maybe(def_args, name, value);
+        }
+    }
+
+    return true;
+};
+
+static bool instantiate_body_references(Expression &expression) {
+    auto body = get_pointer(expression.arguments, context.strings.body);
+    if(body) {
+        auto &block = body->block;
+        for(Usize expr_index = 0; expr_index < block.count; expr_index += 1) {
+            auto &expr = block[expr_index];
+
+            auto inherits = get_pointer(expr.arguments, context.strings.inherits);
+            if(inherits != NULL) {
+                if(!instantiate_and_merge(expr, inherits->value)) {
+                    return false;
+                }
+            }
+
+            // NOTE(llw): Recurse.
+            if(!instantiate_body_references(expr)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+};
 
 static bool add_list_initials(Expression &expr) {
     auto &args = expr.arguments;

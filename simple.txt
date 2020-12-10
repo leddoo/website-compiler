@@ -188,6 +188,11 @@
         div inherits: "new_inputs"
 
         div inherits: "classes_and_styles"
+
+        div body: {
+            // instantiation used to not work here.
+            input id: "nice", initial: 69, inherits: "number_input"
+        }
     }
 )
 
