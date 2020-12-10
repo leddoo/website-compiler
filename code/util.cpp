@@ -82,43 +82,6 @@ bool read_quoted_string(Reader<U8> &reader, String &result) {
     return false;
 }
 
-void skip_whitespace(Reader<U8> &reader) {
-    while(reader.current < reader.end) {
-        auto at = *reader.current;
-        if(    at != ' '
-            && at != '\t'
-        ) {
-            break;
-        }
-
-        reader.current += 1;
-    }
-}
-
-void skip_whitespace(
-    Reader<U8> &reader,
-    Unsigned &current_line, const U8 *&line_begin
-) {
-    while(reader.current < reader.end) {
-        auto at = *reader.current;
-        if(    at != ' '
-            && at != '\t'
-            && at != '\r'
-            && at != '\n'
-        ) {
-            break;
-        }
-
-        if(at == '\n') {
-            current_line += 1;
-            line_begin = reader.current + 1;
-        }
-
-        reader.current += 1;
-    }
-}
-
-
 
 //
 // RANGE string table.

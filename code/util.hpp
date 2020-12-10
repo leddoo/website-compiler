@@ -33,12 +33,6 @@ struct Reader {
 
 bool read_quoted_string(Reader<U8> &reader, String &result);
 
-void skip_whitespace(Reader<U8> &reader);
-void skip_whitespace(
-    Reader<U8> &reader,
-    Unsigned &current_line, const U8 *&line_begin
-);
-
 _inline Reader<U8> make_reader(const Array<U8> &array) {
     auto result = Reader<U8> {
         array.values,

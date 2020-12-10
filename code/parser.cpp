@@ -25,6 +25,48 @@ struct Token {
     Token_Type type;
 };
 
+static void skip_whitespace(
+    Reader<U8> &reader,
+    Unsigned &current_line, const U8 *&line_begin
+) {
+    while(reader.current < reader.end) {
+        // NOTE(llw): Single line comment.
+        if(    reader.current[0] == '/'
+            && reader.current + 1 < reader.end
+            && reader.current[1] == '/'
+        ) {
+            reader.current += 2;
+
+            while(reader.current < reader.end) {
+                auto at = *reader.current;
+                if(at == '\n') {
+                    break;
+                }
+
+                reader.current += 1;
+            }
+        }
+
+        auto at = *reader.current;
+        if(    at != ' '
+            && at != '\t'
+            && at != '\r'
+            && at != '\n'
+        ) {
+            break;
+        }
+
+        if(at == '\n') {
+            current_line += 1;
+            line_begin = reader.current + 1;
+        }
+
+        reader.current += 1;
+    }
+}
+
+
+
 
 static bool tokenize(
     String_Table &string_table,

@@ -180,7 +180,8 @@
 )
 
 
-(page
+// a comment!
+(page                           // another one!
     defines: "small_things"
     body: {
         select inherits: "test_select"
