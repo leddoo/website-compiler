@@ -87,8 +87,8 @@
             initial: "a@b"
         )
 
-        div styles: [ "desktop", "spacer_4" ]
-        div styles: [ "mobile",  "spacer_3" ]
+        div classes: [ "desktop", "spacer_4" ]
+        div classes: [ "mobile",  "spacer_3" ]
     }
 )
 
@@ -127,7 +127,7 @@
     id: "x0"
     parameters: [ foo ]
     body: { foo }
-    styles: [ "x0" ]
+    classes: [ "x0" ]
 )
 
 (div
@@ -135,7 +135,7 @@
     id: "x1"
     inherits: "x0"
     foo: { "hi" }
-    styles: [ "x1" ]
+    classes: [ "x1" ]
 )
 
 (page
@@ -186,6 +186,8 @@
     body: {
         select inherits: "test_select"
         div inherits: "new_inputs"
+
+        div inherits: "classes_and_styles"
     }
 )
 
@@ -217,5 +219,15 @@
         input id: "number", inherits: "number_input"
         input id: "date",   inherits: "date_input"
     }
+)
+
+(div
+    defines: "classes_and_styles"
+    classes: [ "some_class" ]
+    styles: [
+        "width: 50px",
+        "height: 50px",
+        "background-color: green",
+    ]
 )
 

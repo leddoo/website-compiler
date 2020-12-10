@@ -222,6 +222,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     auto inherits   = get_pointer(args, context.strings.inherits);
     auto body       = get_pointer(args, context.strings.body);
     auto id         = get_pointer(args, context.strings.id);
+    auto classes    = get_pointer(args, context.strings.classes);
     auto styles     = get_pointer(args, context.strings.styles);
 
     use_arg(context.strings.defines);
@@ -261,6 +262,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             && inherits == NULL
             && body     == NULL
             && id       == NULL
+            && classes  == NULL
             && styles   == NULL
         ) {
             printf("Error: Empty div.\n");
@@ -285,6 +287,7 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             && inherits == NULL
             && body     == NULL
             && id       == NULL
+            && classes  == NULL
             && styles   == NULL
         ) {
             printf("Error: Empty form.\n");
@@ -462,6 +465,11 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
     // NOTE(llw): text.
     else if(expr.type == context.strings.text) {
+        if(classes != NULL || styles != NULL) {
+            printf("Error: Text does not support css.\n");
+            return false;
+        }
+
         if(!validate_arg_type(context.strings.value, ARG_STRING, true)) {
             return false;
         }
@@ -639,8 +647,10 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     }
 
 
-    // NOTE(llw): Styles.
-    if(!validate_arg_list(context.strings.styles, ARG_STRING, false)) {
+    // NOTE(llw): Classes and styles.
+    if(    !validate_arg_list_p(context.strings.classes, ARG_STRING, false, classes)
+        || !validate_arg_list_p(context.strings.styles, ARG_STRING, false, styles)
+    ) {
         return false;
     }
 
@@ -800,7 +810,7 @@ static bool insert_arguments(
     - Removes parameter values from reference and inserts them into definition.
     - Recurses on definition.body expressions and definition itself.
     - "On way up", merging takes place:
-        - For style_sheets, scripts, styles lists: Concatenate.
+        - For style_sheets, scripts, classes, styles lists: Concatenate.
         - Others: Outermost writer wins.
 */
 static bool instantiate(
@@ -830,6 +840,7 @@ static bool instantiate(
 
             if(    name == context.strings.style_sheets
                 || name == context.strings.scripts
+                || name == context.strings.classes
                 || name == context.strings.styles
             ) {
                 auto &list = value.list;

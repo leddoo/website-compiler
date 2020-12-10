@@ -50,7 +50,9 @@ void setup_context() {
     strings.body = intern(table, STRING("body"));
     strings.type  = intern(table, STRING("type"));
     strings.value = intern(table, STRING("value"));
-    strings.styles = intern(table, STRING("styles"));
+
+    strings.classes = intern(table, STRING("classes"));
+    strings.styles  = intern(table, STRING("styles"));
 
     strings.desktop = intern(table, STRING("desktop"));
     strings.mobile  = intern(table, STRING("mobile"));

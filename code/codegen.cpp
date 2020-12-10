@@ -72,6 +72,18 @@ void codegen() {
 
 
 
+static void push_list(Array<U8> &buffer, const Array<Argument> &list, String separator) {
+    push(buffer, STRING("\""));
+    for(Usize i = 0; i < list.count; i += 1) {
+        push(buffer, list[i].value);
+
+        if(i < list.count - 1) {
+            push(buffer, separator);
+        }
+    }
+    push(buffer, STRING("\""));
+}
+
 static void generate_html(
     const Expression &expr,
     Interned_String parent,
@@ -121,21 +133,18 @@ static void generate_html(
         push(init_js, STRING("\");\n"));
     }
 
-    auto styles_string = create_array<U8>(context.temporary);
+    auto css_string = create_array<U8>(context.temporary);
+
+    auto classes = get_pointer(args, context.strings.classes);
+    if(classes != NULL) {
+        push(css_string, STRING(" class="));
+        push_list(css_string, classes->list, STRING(" "));
+    }
+
     auto styles = get_pointer(args, context.strings.styles);
     if(styles != NULL) {
-        push(styles_string, STRING(" class=\""));
-
-        const auto &list = styles->list;
-        for(Usize i = 0; i < list.count; i += 1) {
-            push(styles_string, list[i].value);
-
-            if(i < list.count - 1) {
-                push(styles_string, STRING(" "));
-            }
-        }
-
-        push(styles_string, STRING("\""));
+        push(css_string, STRING(" style="));
+        push_list(css_string, styles->list, STRING("; "));
     }
 
 
@@ -144,7 +153,7 @@ static void generate_html(
         push(html, STRING("<"));
         push(html, type);
         push(html, id_string);
-        push(html, styles_string);
+        push(html, css_string);
         push(html, STRING(">\n"));
     };
 
@@ -207,7 +216,7 @@ static void generate_html(
         do_indent(html, html_indent);
         push(html, STRING("<option"));
         push(html, id_string);
-        push(html, styles_string);
+        push(html, css_string);
         if(value != NULL) {
             push(html, STRING(" value=\""));
             push(html, value->value);
@@ -228,7 +237,7 @@ static void generate_html(
         do_indent(html, html_indent);
         push(html, STRING("<label"));
         push(html, id_string);
-        push(html, styles_string);
+        push(html, css_string);
         if(_for != NULL) {
             push(html, STRING(" for=\""));
             push(html, make_full_id(parent, _for->value));
@@ -246,7 +255,7 @@ static void generate_html(
         do_indent(html, html_indent);
         push(html, STRING("<input"));
         push(html, id_string);
-        push(html, styles_string);
+        push(html, css_string);
         push(html, STRING(" type=\""));
         push(html, type);
         push(html, STRING("\""));
@@ -461,7 +470,15 @@ static void generate_instantiation_js(
 
         auto styles = get_pointer(args, context.strings.styles);
         if(styles != NULL) {
-            const auto &list = styles->list;
+            do_indent(buffer, indent);
+            push(buffer, STRING("dom.style = "));
+            push_list(buffer, styles->list, STRING("; "));
+            push(buffer, STRING(";\n"));
+        }
+
+        auto classes = get_pointer(args, context.strings.classes);
+        if(classes != NULL) {
+            const auto &list = classes->list;
             for(Usize i = 0; i < list.count; i += 1) {
                 do_indent(buffer, indent);
                 push(buffer, STRING("dom.classList.add(\""));
