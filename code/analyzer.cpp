@@ -354,6 +354,42 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             }
         }
     }
+    // NOTE(llw): select.
+    else if(expr.type == context.strings.select) {
+        supports_id = true;
+        requires_id = concrete;
+
+        if(concrete) {
+            auto options = get_pointer(args, context.strings.options);
+            if(!validate_arg_type_p(context.strings.options, ARG_BLOCK, true, options)) {
+                return false;
+            }
+
+            const auto &block = options->block;
+            for(Usize i = 0; i < block.count; i += 1) {
+                const auto &option = block[i];
+                const auto &args = option.arguments;
+
+                if(option.type != context.strings.option) {
+                    printf("Error: Not an option.\n");
+                    return false;
+                }
+
+                auto value = get_pointer(args, context.strings.value);
+                if(value != NULL && value->type != ARG_STRING) {
+                    printf("Error: Option value must be a string.\n");
+                    return false;
+                }
+
+                // NOTE(llw): required.
+                auto text = get_pointer(args, context.strings.text);
+                if(text == NULL || text->type != ARG_STRING) {
+                    printf("Error: Option text must be a string.\n");
+                    return false;
+                }
+            }
+        }
+    }
     // NOTE(llw): label.
     else if(expr.type == context.strings.label) {
         supports_id   = true;

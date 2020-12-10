@@ -179,3 +179,21 @@
     }
 )
 
+
+(page
+    defines: "small_things"
+    body: {
+        select inherits: "test_select"
+    }
+)
+
+(select
+    defines: "test_select"
+    id: "select"
+    options: {
+        option value: "0", text: "a"
+        option value: "1", text: "b"
+        option text: "c"
+    }
+)
+

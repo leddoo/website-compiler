@@ -37,7 +37,8 @@ extern struct Context {
             label, input,
             _for,
             min, max, locked, initial,
-            email;
+            email,
+            select, option, options;
     } strings;
 
     Map<Interned_String, int> simple_types;

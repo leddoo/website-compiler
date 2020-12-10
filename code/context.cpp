@@ -85,6 +85,10 @@ void setup_context() {
 
     strings.email = intern(table, STRING("email"));
 
+    strings.select  = intern(table, STRING("select"));
+    strings.option  = intern(table, STRING("option"));
+    strings.options = intern(table, STRING("options"));
+
 
     TEMP_SCOPE(context.temporary);
 

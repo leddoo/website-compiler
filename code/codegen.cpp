@@ -187,6 +187,41 @@ static void generate_html(
     else if(expr.type == context.strings.list) {
         write_simple_element(context.strings.div);
     }
+    else if(expr.type == context.strings.select) {
+        begin_simple_element(context.strings.select);
+
+        const auto &options = args[context.strings.options].block;
+        for(Usize i = 0; i < options.count; i += 1) {
+            generate_html(
+                options[i], parent,
+                html, html_indent + 1,
+                init_js, init_js_indent
+            );
+        }
+
+        end_element(context.strings.select);
+    }
+    else if(expr.type == context.strings.option) {
+        auto value = get_pointer(args, context.strings.value);
+
+        do_indent(html, html_indent);
+        push(html, STRING("<option"));
+        push(html, id_string);
+        push(html, styles_string);
+        if(value != NULL) {
+            push(html, STRING(" value=\""));
+            push(html, value->value);
+            push(html, STRING("\""));
+        }
+        push(html, STRING(">\n"));
+
+        auto text = args[context.strings.text];
+        do_indent(html, html_indent + 1);
+        push(html, text.value);
+        push(html, STRING("\n"));
+
+        end_element(context.strings.option);
+    }
     else if(expr.type == context.strings.label) {
         auto _for = get_pointer(args, context.strings._for);
 
@@ -526,6 +561,45 @@ static void generate_instantiation_js(
             push(buffer, max->value);
             push(buffer, STRING(";\n"));
         }
+
+        end_element();
+    }
+    else if(expr.type == context.strings.select) {
+        write_parent_variables();
+        begin_element();
+        write_create_dom(STRING("select"));
+        write_create_tree_node();
+
+        const auto &options = args[context.strings.options].block;
+        for(Usize i = 0; i < options.count; i += 1) {
+            generate_instantiation_js(
+                options[i],
+                buffer, indent
+            );
+        }
+
+        end_element();
+    }
+    else if(expr.type == context.strings.option) {
+        write_parent_variables();
+        begin_element();
+        write_create_dom(STRING("option"));
+
+        auto value = get_pointer(args, context.strings.value);
+        if(value != NULL) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("dom.value = \""));
+            push(buffer, value->value);
+            push(buffer, STRING("\";\n"));
+        }
+
+        auto text = args[context.strings.text];
+        do_indent(buffer, indent);
+        push(buffer, STRING("let text = document.createTextNode(\""));
+        push(buffer, text.value);
+        push(buffer, STRING("\");\n"));
+        do_indent(buffer, indent);
+        push(buffer, STRING("dom.append(text);\n"));
 
         end_element();
     }
