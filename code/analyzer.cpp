@@ -417,31 +417,47 @@ static bool validate(const Expression &expr, Validate_Context vc) {
     // NOTE(llw): input.
     else if(expr.type == context.strings.input) {
         supports_id = true;
-        requires_id = true;
+        requires_id = concrete;
 
-        auto type    = get_pointer(args, context.strings.type);
-        auto min     = get_pointer(args, context.strings.min);
-        auto max     = get_pointer(args, context.strings.max);
-        auto initial = get_pointer(args, context.strings.initial);
+        if(concrete) {
+            auto type    = get_pointer(args, context.strings.type);
+            auto min     = get_pointer(args, context.strings.min);
+            auto max     = get_pointer(args, context.strings.max);
+            auto initial = get_pointer(args, context.strings.initial);
 
-        if(!validate_arg_type_p(context.strings.type, ARG_STRING, true, type)) {
-            return false;
-        }
+            if(!validate_arg_type_p(context.strings.type, ARG_STRING, true, type)) {
+                return false;
+            }
 
-        // NOTE(llw): Type specific validation.
-        if(    type->value == context.strings.text
-            || type->value == context.strings.email
-        ) {
-            if(    !validate_arg_type_p(context.strings.min, ARG_NUMBER, false, min)
-                || !validate_arg_type_p(context.strings.max, ARG_NUMBER, false, max)
-                || !validate_arg_type_p(context.strings.initial, ARG_STRING, false, initial)
+            // NOTE(llw): Type specific validation.
+            if(    type->value == context.strings.text
+                || type->value == context.strings.email
             ) {
+                if(    !validate_arg_type_p(context.strings.min, ARG_NUMBER, false, min)
+                    || !validate_arg_type_p(context.strings.max, ARG_NUMBER, false, max)
+                    || !validate_arg_type_p(context.strings.initial, ARG_STRING, false, initial)
+                ) {
+                    return false;
+                }
+            }
+            else if(type->value == context.strings.number) {
+                if(!validate_arg_type_p(context.strings.initial, ARG_NUMBER, false, initial)) {
+                    return false;
+                }
+            }
+            else if(type->value == context.strings.date) {
+                // ok.
+            }
+            else {
+                printf("Invalid input type.\n");
                 return false;
             }
         }
         else {
-            printf("Invalid input type.\n");
-            return false;
+            use_arg(context.strings.type);
+            use_arg(context.strings.min);
+            use_arg(context.strings.max);
+            use_arg(context.strings.initial);
         }
     }
     // NOTE(llw): text.

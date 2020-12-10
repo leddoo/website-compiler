@@ -184,6 +184,7 @@
     defines: "small_things"
     body: {
         select inherits: "test_select"
+        div inherits: "new_inputs"
     }
 )
 
@@ -194,6 +195,26 @@
         option value: "0", text: "a"
         option value: "1", text: "b"
         option text: "c"
+    }
+)
+
+(input
+    defines: "number_input"
+    parameters: []
+    type: "number", initial: 42
+)
+
+(input
+    defines: "date_input"
+    parameters: []
+    type: "date"
+)
+
+(div
+    defines: "new_inputs",
+    body: {
+        input id: "number", inherits: "number_input"
+        input id: "date",   inherits: "date_input"
     }
 )
 

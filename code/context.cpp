@@ -83,7 +83,9 @@ void setup_context() {
     strings.locked  = intern(table, STRING("locked"));
     strings.initial = intern(table, STRING("initial"));
 
-    strings.email = intern(table, STRING("email"));
+    strings.email  = intern(table, STRING("email"));
+    strings.number = intern(table, STRING("number"));
+    strings.date   = intern(table, STRING("date"));
 
     strings.select  = intern(table, STRING("select"));
     strings.option  = intern(table, STRING("option"));
