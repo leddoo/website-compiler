@@ -72,7 +72,9 @@ class Tree_Node {
 
     tn_clear() {
         for(const entry in this) {
-            if(this[entry] instanceof Tree_Node) {
+            if(    this[entry] instanceof Tree_Node
+                && !entry.startsWith("tn_")
+            ) {
                 delete this[entry];
             }
         }
