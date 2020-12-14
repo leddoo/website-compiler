@@ -70,6 +70,16 @@ class Tree_Node {
     }
 
 
+    tn_clear() {
+        for(const entry in this) {
+            if(this[entry] instanceof Tree_Node) {
+                delete this[entry];
+            }
+        }
+        this.tn_dom.innerHTML = "";
+    }
+
+
 
     tn_listify(make_entry, min, max) {
         console.assert(!this.tn_is_list);
