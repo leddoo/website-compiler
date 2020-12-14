@@ -8,6 +8,12 @@ static void do_indent(Array<U8> &buffer, Usize indent) {
     }
 }
 
+static void push_tn_export(Array<U8> &buffer, Interned_String name) {
+    push(buffer, STRING("tn_exports[\""));
+    push(buffer, name);
+    push(buffer, STRING("\"]"));
+}
+
 
 static void add_output_file(Interned_String name, String extension, const Array<U8> &buffer) {
     TEMP_SCOPE(context.temporary);
@@ -35,6 +41,8 @@ void codegen() {
     auto instantiate_js = create_array<U8>(context.arena);
     reserve(instantiate_js, MEBI(1));
 
+    push(instantiate_js, STRING("tn_exports = {};\n\n"));
+
     for(Usize i = 0; i < context.exports.count; i += 1) {
         const auto &expr = *context.exports[i];
         auto defines = expr.arguments[context.strings.defines].value;
@@ -44,12 +52,19 @@ void codegen() {
             add_output_file(defines, STRING(".html"), html);
         }
         else {
-            push(instantiate_js, STRING("function tn_make_"));
-            push(instantiate_js, defines);
-            push(instantiate_js, STRING("(parent) {\n"));
+            push_tn_export(instantiate_js, defines);
+            push(instantiate_js, STRING(" = {};\n"));
+
+            push_tn_export(instantiate_js, defines);
+            push(instantiate_js, STRING(".type = \""));
+            push(instantiate_js, expr.type);
+            push(instantiate_js, STRING("\";\n"));
+
+            push_tn_export(instantiate_js, defines);
+            push(instantiate_js, STRING(".make = function(parent) {\n"));
 
             do_indent(instantiate_js, 1);
-            push(instantiate_js, STRING("console.assert(parent.tn_dom.id != \"\");\n\n"));
+            push(instantiate_js, STRING("console.assert(parent instanceof Tree_Node);\n\n"));
 
             do_indent(instantiate_js, 1);
             push(instantiate_js, STRING("let dom = parent.tn_dom;\n"));
@@ -314,8 +329,8 @@ static void generate_html(
 
         do_indent(init_js, init_js_indent);
         push(init_js, STRING("me.tn_listify("));
-        push(init_js, STRING("tn_make_"));
-        push(init_js, type_string);
+        push_tn_export(init_js, type_string);
+        push(init_js, STRING(".make"));
         push(init_js, STRING(", "));
         push(init_js, min_string);
         push(init_js, STRING(", "));
@@ -488,6 +503,13 @@ static void generate_instantiation_js(
         do_indent(buffer, indent);
         push(buffer, STRING("my_dom_parent.append(dom);\n"));
 
+        if(id != NULL && id_type == ID_HTML) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("dom.id = \""));
+            push(buffer, identifier);
+            push(buffer, STRING("\";\n"));
+        }
+
         auto styles = get_pointer(args, context.strings.styles);
         if(styles != NULL) {
             do_indent(buffer, indent);
@@ -559,8 +581,8 @@ static void generate_instantiation_js(
         // NOTE(llw): listify.
         do_indent(buffer, indent);
         push(buffer, STRING("me.tn_listify("));
-        push(buffer, STRING("tn_make_"));
-        push(buffer, type_string);
+        push_tn_export(buffer, type_string);
+        push(buffer, STRING(".make"));
         push(buffer, STRING(", -Infinity, +Infinity);\n"));
 
         // NOTE(llw): initial.
@@ -639,25 +661,31 @@ static void generate_instantiation_js(
         auto _for = get_pointer(args, context.strings._for);
 
         write_parent_variables();
+
+        auto for_ident = String {};
+        if(_for != NULL) {
+            Id_Type type;
+            for_ident = get_id_identifier(_for->value, &type);
+
+            do_indent(buffer, indent);
+            if(type == ID_LOCAL) {
+                push(buffer, STRING("var my_for_prefix = me.tn_dom.id + \"-\";\n"));
+            }
+            else if(type == ID_GLOBAL) {
+                push(buffer, STRING("var my_for_prefix = \"page-\";\n"));
+            }
+            else {
+                push(buffer, STRING("var my_for_prefix = \"\";\n"));
+            }
+        }
+
         begin_element();
         write_create_dom(STRING("label"));
 
         if(_for != NULL) {
-            Id_Type type;
-            auto ident = get_id_identifier(_for->value, &type);
-
             do_indent(buffer, indent);
-            if(type == ID_LOCAL) {
-                push(buffer, STRING("dom.htmlFor = my_tree_parent.tn_dom.id + \"-"));
-            }
-            else if(type == ID_GLOBAL) {
-                push(buffer, STRING("dom.htmlFor = \"page-"));
-            }
-            else {
-                assert(type == ID_HTML);
-                push(buffer, STRING("dom.htmlFor = \""));
-            }
-            push(buffer, ident);
+            push(buffer, STRING("dom.htmlFor = my_for_prefix + \""));
+            push(buffer, for_ident);
             push(buffer, STRING("\";\n"));
         }
 
