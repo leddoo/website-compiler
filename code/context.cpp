@@ -115,36 +115,53 @@ void setup_context() {
 }
 
 
-String get_id_identifier(Interned_String id, bool *is_global) {
+String get_id_identifier(Interned_String id, Id_Type *id_type) {
     auto ident = context.string_table[id];
 
-    auto is_gid = ident.values[0] == '#';
-    ident.values += is_gid;
-    ident.size   -= is_gid;
+    Id_Type type;
+    Usize offset;
+    if(ident.values[0] == '#') {
+        type = ID_GLOBAL;
+        offset = 1;
+    }
+    else if(ident.values[0] == '$') {
+        type = ID_HTML;
+        offset = 1;
+    }
+    else {
+        type = ID_LOCAL;
+        offset = 0;
+    }
 
-    if(is_global != NULL) {
-        *is_global = is_gid;
+    ident.values += offset;
+    ident.size   -= offset;
+
+    if(id_type != NULL) {
+        *id_type = type;
     }
 
     return ident;
 }
 
-Interned_String make_full_id(Interned_String prefix, String id, bool is_global) {
+Interned_String make_full_id(Interned_String prefix, String id, Id_Type id_type) {
     auto result = Interned_String {};
 
     if(prefix != 0) {
         TEMP_SCOPE(context.temporary);
         auto buffer = create_array<U8>(context.temporary);
 
-        if(is_global) {
-            push(buffer, STRING("page-"));
-            push(buffer, id);
-        }
-        else {
+        if(id_type == ID_LOCAL) {
             push(buffer, prefix);
             push(buffer, STRING("-"));
-            push(buffer, id);
         }
+        else if(id_type == ID_GLOBAL) {
+            push(buffer, STRING("page-"));
+        }
+        else {
+            assert(id_type == ID_HTML);
+        }
+
+        push(buffer, id);
 
         result = intern(context.string_table, str(buffer));
     }
@@ -153,10 +170,10 @@ Interned_String make_full_id(Interned_String prefix, String id, bool is_global) 
 }
 
 Interned_String make_full_id(Interned_String prefix, Interned_String id) {
-    auto is_global = false;
-    auto ident = get_id_identifier(id, &is_global);
+    Id_Type type;
+    auto ident = get_id_identifier(id, &type);
 
-    auto result = make_full_id(prefix, ident, is_global);
+    auto result = make_full_id(prefix, ident, type);
     return result;
 }
 

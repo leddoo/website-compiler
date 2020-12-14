@@ -244,3 +244,25 @@
     ]
 )
 
+
+(page
+    defines: "ids"
+    body: {
+        div inherits: "ids_div"
+    }
+)
+
+(div
+    defines: "ids_div"
+    id: "outer"
+    body: {
+        div id: "inner"
+        div id: "#global"
+        div id: "$html", body: {
+            div id: "content"
+        }
+
+        label for: "$html"
+    }
+)
+

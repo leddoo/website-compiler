@@ -98,29 +98,41 @@ static void generate_html(
     auto full_id = Interned_String {};
 
     auto id_string = create_array<U8>(context.temporary);
+    auto identifier = String {};
     if(id != NULL) {
-        auto is_global = false;
-        auto identifier = get_id_identifier(id->value, &is_global);
-        full_id = make_full_id(parent, identifier, is_global);
-        parent = full_id;
+        Id_Type id_type;
+        identifier = get_id_identifier(id->value, &id_type);
+        full_id = make_full_id(parent, identifier, id_type);
 
         push(id_string, STRING(" id=\""));
         push(id_string, full_id);
         push(id_string, STRING("\""));
 
-        // NOTE(llw): id setup code 1/2.
-        do_indent(init_js, init_js_indent);
-        push(init_js, STRING("\n"));
+        // NOTE(llw): Generate no code for ID_HTML.
+        if(id_type != ID_HTML) {
+            do_indent(init_js, init_js_indent);
+            push(init_js, STRING("\n"));
+        }
 
-        if(is_global) {
+        if(id_type == ID_LOCAL) {
+            do_indent(init_js, init_js_indent);
+            push(init_js, STRING("var my_tree_parent = me;\n"));
+
+            parent = full_id;
+        }
+        else if(id_type == ID_GLOBAL) {
             do_indent(init_js, init_js_indent);
             push(init_js, STRING("var my_tree_parent = window.page;\n"));
         }
         else {
-            do_indent(init_js, init_js_indent);
-            push(init_js, STRING("var my_tree_parent = me;\n"));
+            assert(id_type == ID_HTML);
+            // NOTE(llw): Generate no code for ID_HTML.
+            full_id = 0;
         }
+    }
 
+    // NOTE(llw): id setup code 1/2.
+    if(full_id != 0) {
         do_indent(init_js, init_js_indent);
         push(init_js, STRING("{\n"));
         init_js_indent += 1;
@@ -432,9 +444,9 @@ static void generate_instantiation_js(
 
     auto id = get_pointer(args, context.strings.id);
     auto identifier = String {};
-    auto is_global_id = false;
+    auto id_type = ID_HTML;
     if(id != NULL) {
-        identifier = get_id_identifier(id->value, &is_global_id);
+        identifier = get_id_identifier(id->value, &id_type);
     }
 
 
@@ -444,13 +456,13 @@ static void generate_instantiation_js(
         do_indent(buffer, indent);
         push(buffer, STRING("var my_dom_parent = dom;\n"));
 
-        if(is_global_id) {
-            do_indent(buffer, indent);
-            push(buffer, STRING("var my_tree_parent = window.page;\n"));
-        }
-        else {
+        if(id_type == ID_LOCAL) {
             do_indent(buffer, indent);
             push(buffer, STRING("var my_tree_parent = me;\n"));
+        }
+        else if(id_type == ID_GLOBAL) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("var my_tree_parent = window.page;\n"));
         }
 
     };
@@ -497,17 +509,12 @@ static void generate_instantiation_js(
     };
 
     auto write_create_tree_node = [&]() {
-        push(buffer, STRING("\n"));
-
-        if(id != NULL) {
+        if(id != NULL && id_type != ID_HTML) {
+            push(buffer, STRING("\n"));
             do_indent(buffer, indent);
             push(buffer, STRING("let me = new Tree_Node(my_tree_parent, dom, \""));
             push(buffer, identifier);
             push(buffer, STRING("\");\n"));
-        }
-        else {
-            do_indent(buffer, indent);
-            push(buffer, STRING("// no tree node.\n"));
         }
     };
 
@@ -636,15 +643,19 @@ static void generate_instantiation_js(
         write_create_dom(STRING("label"));
 
         if(_for != NULL) {
-            auto global = false;
-            auto ident = get_id_identifier(_for->value, &global);
+            Id_Type type;
+            auto ident = get_id_identifier(_for->value, &type);
 
             do_indent(buffer, indent);
-            if(global) {
+            if(type == ID_LOCAL) {
+                push(buffer, STRING("dom.htmlFor = my_tree_parent.tn_dom.id + \"-"));
+            }
+            else if(type == ID_GLOBAL) {
                 push(buffer, STRING("dom.htmlFor = \"page-"));
             }
             else {
-                push(buffer, STRING("dom.htmlFor = my_tree_parent.tn_dom.id + \"-"));
+                assert(type == ID_HTML);
+                push(buffer, STRING("dom.htmlFor = \""));
             }
             push(buffer, ident);
             push(buffer, STRING("\";\n"));

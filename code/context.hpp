@@ -70,9 +70,15 @@ _inline void push(Array<U8> &array, Interned_String id) {
 }
 
 
-String get_id_identifier(Interned_String id, bool *is_global);
+enum Id_Type {
+    ID_LOCAL,
+    ID_GLOBAL,
+    ID_HTML,
+};
 
-Interned_String make_full_id(Interned_String prefix, String id, bool is_global);
+String get_id_identifier(Interned_String id, Id_Type *id_type);
+
+Interned_String make_full_id(Interned_String prefix, String id, Id_Type id_type);
 
 Interned_String make_full_id(Interned_String prefix, Interned_String id);
 

@@ -527,8 +527,8 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             return false;
         }
 
-        auto is_global = false;
-        auto ident = get_id_identifier(id->value, &is_global);
+        Id_Type id_type;
+        auto ident = get_id_identifier(id->value, &id_type);
         if(!is_identifier(ident)) {
             printf("Error: ids must be identifiers.\n");
             return false;
@@ -536,11 +536,15 @@ static bool validate(const Expression &expr, Validate_Context vc) {
 
         // NOTE(llw): Check id uniqueness.
         if(vc.id_prefix != 0) {
-            full_id = make_full_id(vc.id_prefix, ident, is_global);
+            full_id = make_full_id(vc.id_prefix, ident, id_type);
 
             if(!insert_maybe(*vc.id_table, full_id, 0)) {
                 printf("Error: Duplicate id.\n");
                 return false;
+            }
+
+            if(id_type == ID_LOCAL) {
+                vc.id_prefix = full_id;
             }
         }
 
@@ -597,10 +601,6 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             if(body->type != ARG_BLOCK) {
                 printf("Error: Body must be a block.\n");
                 return false;
-            }
-
-            if(full_id) {
-                vc.id_prefix = full_id;
             }
 
             const auto &block = body->block;
