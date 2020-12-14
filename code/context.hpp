@@ -35,7 +35,7 @@ extern struct Context {
             h1, p, span,
             parameters,
             form,
-            label, input,
+            label, input, button,
             _for,
             min, max, locked, initial,
             email, number, date, checkbox,

@@ -77,6 +77,7 @@ void setup_context() {
 
     strings.label = intern(table, STRING("label"));
     strings.input = intern(table, STRING("input"));
+    strings.button = intern(table, STRING("button"));
 
     strings._for = intern(table, STRING("for"));
 
@@ -112,6 +113,7 @@ void setup_context() {
     insert(context.simple_types, strings.h1, 0);
     insert(context.simple_types, strings.p, 0);
     insert(context.simple_types, strings.span, 0);
+    insert(context.simple_types, strings.button, 0);
 }
 
 

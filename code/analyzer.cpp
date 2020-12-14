@@ -476,6 +476,11 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             use_arg(context.strings.initial);
         }
     }
+    else if(expr.type == context.strings.button) {
+        supports_id = true;
+        requires_id = concrete;
+        supports_body = true;
+    }
     // NOTE(llw): text.
     else if(expr.type == context.strings.text) {
         if(classes != NULL || styles != NULL) {

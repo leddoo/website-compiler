@@ -225,12 +225,20 @@
     initial: 1
 )
 
+(button
+    defines: "button"
+    parameters: [ body ]
+    body: { body }
+)
+
 (div
     defines: "new_inputs",
     body: {
         input id: "number", inherits: "number_input"
         input id: "date",   inherits: "date_input"
         input id: "check",  inherits: "checkbox_input"
+
+        button id: "button", inherits: "button", body: { "foo" }
     }
 )
 
