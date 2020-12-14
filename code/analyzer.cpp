@@ -584,49 +584,6 @@ static bool validate(const Expression &expr, Validate_Context vc) {
 
     }
 
-    // NOTE(llw): Validate inheritance.
-    if(inherits != NULL) {
-
-        if(inherits->type != ARG_STRING) {
-            printf("Error: 'inherits' must be a string.\n");
-            return false;
-        }
-
-        // NOTE(llw): Existence.
-        auto symbol = get_pointer(context.symbols, inherits->value);
-        if(symbol == NULL) {
-            printf("Error: Referenced symbol does not exist.\n");
-            return false;
-        }
-
-        // NOTE(llw): Type.
-        if(symbol->expression->type != expr.type) {
-            printf("Error: Referenced symbol is of a different type.\n");
-            return false;
-        }
-
-        // NOTE(llw): Recurse.
-        if(!validate(*symbol)) {
-            return false;
-        }
-
-        // NOTE(llw): Check parameters provided.
-        auto parameters = get_pointer(symbol->expression->arguments, context.strings.parameters);
-        if(parameters != NULL) {
-            const auto &list = parameters->list;
-            for(Usize i = 0; i < list.count; i += 1) {
-                auto name = list[i].value;
-                use_arg(name);
-
-                if(!has(args, name)) {
-                    printf("Parameter not provided.\n");
-                    return false;
-                }
-            }
-        }
-
-    }
-
     // NOTE(llw): Validate body.
     if(body != NULL) {
         if(!supports_body) {
@@ -669,13 +626,15 @@ static bool validate(const Expression &expr, Validate_Context vc) {
 
 
     // NOTE(llw): Unused arguments.
-    for(Usize i = 0; i < args.count; i += 1) {
-        auto name = args.entries[i].key;
+    if(concrete) {
+        for(Usize i = 0; i < args.count; i += 1) {
+            auto name = args.entries[i].key;
 
-        if(!has(used_args, name)) {
-            auto string = context.string_table[name];
-            printf("Error: Unused argument '%s'\n", string.values);
-            return false;
+            if(!has(used_args, name)) {
+                auto string = context.string_table[name];
+                printf("Error: Unused argument '%s'\n", string.values);
+                return false;
+            }
         }
     }
 
@@ -684,14 +643,6 @@ static bool validate(const Expression &expr, Validate_Context vc) {
 
 
 static bool validate(Symbol &symbol) {
-    if(symbol.state == SYMS_DONE) {
-        return true;
-    }
-    else if(symbol.state == SYMS_PROCESSING) {
-        printf("Circular dependency.\n");
-        return false;
-    }
-
     const auto &expr = *symbol.expression;
 
     auto vc = Validate_Context {};
@@ -709,11 +660,7 @@ static bool validate(Symbol &symbol) {
         vc.label_fors = &label_fors;
     }
 
-    symbol.state = SYMS_PROCESSING;
-    auto success = validate(expr, vc);
-    symbol.state = SYMS_DONE;
-
-    if(!success) {
+    if(!validate(expr, vc)) {
         return false;
     }
 
@@ -819,7 +766,7 @@ static bool insert_arguments(
 }
 
 
-static bool instantiate_and_merge(Expression &reference, Interned_String inherits);
+static bool instantiate_and_merge(Expression &reference, Argument inherits);
 static bool instantiate_body_references(Expression &expression);
 
 /* NOTE(llw):
@@ -873,7 +820,7 @@ static bool instantiate(
     // NOTE(llw): Recurse.
     auto inherits = get_pointer(args, context.strings.inherits);
     if(inherits != NULL) {
-        if(!instantiate_and_merge(definition, inherits->value)) {
+        if(!instantiate_and_merge(definition, *inherits)) {
             return false;
         }
     }
@@ -881,12 +828,56 @@ static bool instantiate(
     return true;
 }
 
-static bool instantiate_and_merge(Expression &reference, Interned_String inherits) {
-    auto symbol = context.symbols[inherits];
-    auto instance = duplicate(*symbol.expression, context.arena);
+static bool instantiate_and_merge(Expression &reference, Argument inherits) {
+
+    // NOTE(llw): Validate inheritance.
+    Symbol *symbol;
+    {
+        if(inherits.type != ARG_STRING) {
+            printf("Error: 'inherits' must be a string.\n");
+            return false;
+        }
+
+        // NOTE(llw): Existence.
+        symbol = get_pointer(context.symbols, inherits.value);
+        if(symbol == NULL) {
+            printf("Error: Referenced symbol does not exist.\n");
+            return false;
+        }
+
+        // NOTE(llw): Circular dependency.
+        if(symbol->instantiating) {
+            printf("Error: Circular inheritance.\n");
+            return false;
+        }
+
+        // NOTE(llw): Type.
+        if(symbol->expression->type != reference.type) {
+            printf("Error: Referenced symbol is of a different type.\n");
+            return false;
+        }
+
+        // NOTE(llw): Check parameters provided.
+        auto parameters = get_pointer(symbol->expression->arguments, context.strings.parameters);
+        if(parameters != NULL) {
+            const auto &list = parameters->list;
+            for(Usize i = 0; i < list.count; i += 1) {
+                auto name = list[i].value;
+                if(!has(reference.arguments, name)) {
+                    printf("Parameter not provided.\n");
+                    return false;
+                }
+            }
+        }
+    }
+
+
+    symbol->instantiating = true;
+    auto instance = duplicate(*symbol->expression, context.arena);
     if(!instantiate(&reference, instance)) {
         return false;
     }
+    symbol->instantiating = false;
 
     auto &inst_args = instance.arguments;
     auto &def_args  = reference.arguments;
@@ -932,7 +923,7 @@ static bool instantiate_body_references(Expression &expression) {
 
             auto inherits = get_pointer(expr.arguments, context.strings.inherits);
             if(inherits != NULL) {
-                if(!instantiate_and_merge(expr, inherits->value)) {
+                if(!instantiate_and_merge(expr, *inherits)) {
                     return false;
                 }
             }
@@ -947,7 +938,7 @@ static bool instantiate_body_references(Expression &expression) {
     return true;
 };
 
-static bool add_list_initials(Expression &expr) {
+static bool instantiate_list_initials(Expression &expr) {
     auto &args = expr.arguments;
 
     // NOTE(llw): Recurse.
@@ -957,7 +948,7 @@ static bool add_list_initials(Expression &expr) {
 
         auto &block = body->block;
         for(Usize i = 0; i < block.count; i += 1) {
-            if(!add_list_initials(block[i])) {
+            if(!instantiate_list_initials(block[i])) {
                 return false;
             }
         }
@@ -1041,7 +1032,7 @@ static Expression *instantiate(const Expression &expr) {
         return NULL;
     }
 
-    if(!add_list_initials(*result)) {
+    if(!instantiate_list_initials(*result)) {
         return NULL;
     }
 
