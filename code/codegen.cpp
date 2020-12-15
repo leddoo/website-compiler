@@ -45,7 +45,8 @@ static Array<U8> generate_html(const Expression &page);
 
 static void generate_instantiation_js(
     const Expression &expr,
-    Array<U8> &buffer, Usize indent
+    Array<U8> &buffer, Usize indent,
+    bool takes_id_parameter = false
 );
 
 void codegen() {
@@ -73,7 +74,7 @@ void codegen() {
             push(instantiate_js, STRING(";\n"));
 
             push_tn_export(instantiate_js, defines);
-            push(instantiate_js, STRING(".make = function(parent) {\n"));
+            push(instantiate_js, STRING(".make = function(parent, id) {\n"));
 
             do_indent(instantiate_js, 1);
             push(instantiate_js, STRING("console.assert(parent instanceof Tree_Node);\n\n"));
@@ -84,7 +85,7 @@ void codegen() {
             do_indent(instantiate_js, 1);
             push(instantiate_js, STRING("let me  = parent;\n"));
 
-            generate_instantiation_js(expr, instantiate_js, 1);
+            generate_instantiation_js(expr, instantiate_js, 1, true);
 
             push(instantiate_js, STRING("}\n\n"));
         }
@@ -460,7 +461,8 @@ static Array<U8> generate_html(const Expression &page) {
 
 static void generate_instantiation_js(
     const Expression &expr,
-    Array<U8> &buffer, Usize indent
+    Array<U8> &buffer, Usize indent,
+    bool takes_id_parameter
 ) {
     const auto &args = expr.arguments;
 
@@ -478,7 +480,7 @@ static void generate_instantiation_js(
         do_indent(buffer, indent);
         push(buffer, STRING("var my_dom_parent = dom;\n"));
 
-        if(id_type == ID_LOCAL) {
+        if(id_type == ID_LOCAL || takes_id_parameter) {
             do_indent(buffer, indent);
             push(buffer, STRING("var my_tree_parent = me;\n"));
         }
@@ -541,9 +543,26 @@ static void generate_instantiation_js(
         if(id != NULL && id_type != ID_HTML) {
             push(buffer, STRING("\n"));
             do_indent(buffer, indent);
-            push       (buffer, STRING("let me = new Tree_Node(my_tree_parent, dom, "));
+            push(buffer, STRING("let me = new Tree_Node(my_tree_parent, dom, "));
+
+            if(takes_id_parameter) {
+                push(buffer, STRING("id !== undefined ? id : "));
+            }
             push_quoted(buffer, identifier);
-            push       (buffer, STRING(");\n"));
+
+            push(buffer, STRING(");\n"));
+        }
+        else if(takes_id_parameter) {
+            push(buffer, STRING("\n"));
+            do_indent(buffer, indent);
+            push(buffer, STRING("let me = my_tree_parent;\n"));
+
+            do_indent(buffer, indent);
+            push(buffer, STRING("if(id !== undefined) {\n"));
+            do_indent(buffer, indent);
+            push(buffer, STRING("    me = new Tree_Node(my_tree_parent, dom, id);\n"));
+            do_indent(buffer, indent);
+            push(buffer, STRING("}\n"));
         }
     };
 

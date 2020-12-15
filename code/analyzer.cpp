@@ -539,6 +539,11 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             return false;
         }
 
+        if(definition && id_type != ID_LOCAL) {
+            printf("Error: ids on definitions must be local.\n");
+            return false;
+        }
+
         // NOTE(llw): Check id uniqueness.
         if(vc.id_prefix != 0) {
             full_id = make_full_id(vc.id_prefix, ident, id_type);
