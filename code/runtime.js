@@ -70,15 +70,23 @@ class Tree_Node {
     }
 
 
-    tn_clear() {
+    tn_for(callback) {
         for(const entry in this) {
             if(    this[entry] instanceof Tree_Node
                 && !entry.startsWith("tn_")
             ) {
-                delete this[entry];
+                callback(this[entry]);
             }
         }
-        this.tn_dom.innerHTML = "";
+    }
+
+
+    tn_clear() {
+        let me = this;
+        me.tn_for(function(entry) {
+            delete me[entry.tn_name];
+        });
+        me.tn_dom.innerHTML = "";
     }
 
 
