@@ -8,6 +8,18 @@ static void do_indent(Array<U8> &buffer, Usize indent) {
     }
 }
 
+static void push_quoted(Array<U8> &buffer, String string) {
+    push(buffer, STRING("\""));
+    push(buffer, string);
+    push(buffer, STRING("\""));
+}
+
+static void push_quoted(Array<U8> &buffer, Interned_String string) {
+    push(buffer, STRING("\""));
+    push(buffer, string);
+    push(buffer, STRING("\""));
+}
+
 static void push_tn_export(Array<U8> &buffer, Interned_String name) {
     push(buffer, STRING("tn_exports[\""));
     push(buffer, name);
@@ -56,9 +68,9 @@ void codegen() {
             push(instantiate_js, STRING(" = {};\n"));
 
             push_tn_export(instantiate_js, defines);
-            push(instantiate_js, STRING(".type = \""));
-            push(instantiate_js, expr.type);
-            push(instantiate_js, STRING("\";\n"));
+            push(instantiate_js, STRING(".type = "));
+            push_quoted(instantiate_js, expr.type);
+            push(instantiate_js, STRING(";\n"));
 
             push_tn_export(instantiate_js, defines);
             push(instantiate_js, STRING(".make = function(parent) {\n"));
@@ -119,9 +131,8 @@ static void generate_html(
         identifier = get_id_identifier(id->value, &id_type);
         full_id = make_full_id(parent, identifier, id_type);
 
-        push(id_string, STRING(" id=\""));
-        push(id_string, full_id);
-        push(id_string, STRING("\""));
+        push(id_string, STRING(" id="));
+        push_quoted(id_string, full_id);
 
         // NOTE(llw): Generate no code for ID_HTML.
         if(id_type != ID_HTML) {
@@ -153,11 +164,11 @@ static void generate_html(
         init_js_indent += 1;
 
         do_indent(init_js, init_js_indent);
-        push(init_js, STRING("let me = new Tree_Node(my_tree_parent, document.getElementById(\""));
-        push(init_js, full_id);
-        push(init_js, STRING("\"), \""));
-        push(init_js, identifier);
-        push(init_js, STRING("\");\n"));
+        push       (init_js, STRING("let me = new Tree_Node(my_tree_parent, document.getElementById("));
+        push_quoted(init_js, full_id);
+        push       (init_js, STRING("), "));
+        push_quoted(init_js, identifier);
+        push       (init_js, STRING(");\n"));
     }
 
     auto css_string = create_array<U8>(context.temporary);
@@ -245,9 +256,8 @@ static void generate_html(
         push(html, id_string);
         push(html, css_string);
         if(value != NULL) {
-            push(html, STRING(" value=\""));
-            push(html, value->value);
-            push(html, STRING("\""));
+            push(html, STRING(" value="));
+            push_quoted(html, value->value);
         }
         push(html, STRING(">\n"));
 
@@ -266,9 +276,8 @@ static void generate_html(
         push(html, id_string);
         push(html, css_string);
         if(_for != NULL) {
-            push(html, STRING(" for=\""));
-            push(html, make_full_id(parent, _for->value));
-            push(html, STRING("\""));
+            push(html, STRING(" for="));
+            push_quoted(html, make_full_id(parent, _for->value));
         }
         push(html, STRING(">\n"));
 
@@ -283,14 +292,12 @@ static void generate_html(
         push(html, STRING("<input"));
         push(html, id_string);
         push(html, css_string);
-        push(html, STRING(" type=\""));
-        push(html, type);
-        push(html, STRING("\""));
+        push(html, STRING(" type="));
+        push_quoted(html, type);
         if(initial != NULL) {
             if(type != context.strings.checkbox) {
-                push(html, STRING(" value=\""));
-                push(html, initial->value);
-                push(html, STRING("\""));
+                push(html, STRING(" value="));
+                push_quoted(html, initial->value);
             }
             else {
                 auto value = context.string_table[initial->value];
@@ -377,9 +384,9 @@ static Array<U8> generate_html(const Expression &page) {
     auto icon = get_pointer(page.arguments, context.strings.icon);
     if(icon != NULL) {
         do_indent(html, 1);
-        push(html, STRING("<link rel=\"icon\" href=\""));
-        push(html, icon->value);
-        push(html, STRING("\">\n"));
+        push       (html, STRING("<link rel=\"icon\" href="));
+        push_quoted(html, icon->value);
+        push       (html, STRING(">\n"));
     }
 
     auto style_sheets = get_pointer(page.arguments, context.strings.style_sheets);
@@ -387,9 +394,9 @@ static Array<U8> generate_html(const Expression &page) {
         const auto &list = style_sheets->list;
         for(Usize i = 0; i < list.count; i += 1) {
             do_indent(html, 1);
-            push(html, STRING("<link rel=\"stylesheet\" href=\""));
-            push(html, list[i].value);
-            push(html, STRING("\">\n"));
+            push       (html, STRING("<link rel=\"stylesheet\" href="));
+            push_quoted(html, list[i].value);
+            push       (html, STRING(">\n"));
         }
     }
 
@@ -398,9 +405,9 @@ static Array<U8> generate_html(const Expression &page) {
         const auto &list = scripts->list;
         for(Usize i = 0; i < list.count; i += 1) {
             do_indent(html, 1);
-            push(html, STRING("<script src=\""));
-            push(html, list[i].value);
-            push(html, STRING("\"></script>\n"));
+            push       (html, STRING("<script src="));
+            push_quoted(html, list[i].value);
+            push       (html, STRING("></script>\n"));
         }
     }
 
@@ -496,18 +503,18 @@ static void generate_instantiation_js(
 
     auto write_create_dom = [&](String type) {
         do_indent(buffer, indent);
-        push(buffer, STRING("let dom = document.createElement(\""));
-        push(buffer, type);
-        push(buffer, STRING("\");\n"));
+        push       (buffer, STRING("let dom = document.createElement("));
+        push_quoted(buffer, type);
+        push       (buffer, STRING(");\n"));
 
         do_indent(buffer, indent);
         push(buffer, STRING("my_dom_parent.append(dom);\n"));
 
         if(id != NULL && id_type == ID_HTML) {
             do_indent(buffer, indent);
-            push(buffer, STRING("dom.id = \""));
-            push(buffer, identifier);
-            push(buffer, STRING("\";\n"));
+            push       (buffer, STRING("dom.id = "));
+            push_quoted(buffer, identifier);
+            push       (buffer, STRING(";\n"));
         }
 
         auto styles = get_pointer(args, context.strings.styles);
@@ -523,9 +530,9 @@ static void generate_instantiation_js(
             const auto &list = classes->list;
             for(Usize i = 0; i < list.count; i += 1) {
                 do_indent(buffer, indent);
-                push(buffer, STRING("dom.classList.add(\""));
-                push(buffer, list[i].value);
-                push(buffer, STRING("\");\n"));
+                push       (buffer, STRING("dom.classList.add("));
+                push_quoted(buffer, list[i].value);
+                push       (buffer, STRING(");\n"));
             }
         }
     };
@@ -534,9 +541,9 @@ static void generate_instantiation_js(
         if(id != NULL && id_type != ID_HTML) {
             push(buffer, STRING("\n"));
             do_indent(buffer, indent);
-            push(buffer, STRING("let me = new Tree_Node(my_tree_parent, dom, \""));
-            push(buffer, identifier);
-            push(buffer, STRING("\");\n"));
+            push       (buffer, STRING("let me = new Tree_Node(my_tree_parent, dom, "));
+            push_quoted(buffer, identifier);
+            push       (buffer, STRING(");\n"));
         }
     };
 
@@ -642,16 +649,17 @@ static void generate_instantiation_js(
         auto value = get_pointer(args, context.strings.value);
         if(value != NULL) {
             do_indent(buffer, indent);
-            push(buffer, STRING("dom.value = \""));
-            push(buffer, value->value);
-            push(buffer, STRING("\";\n"));
+            push       (buffer, STRING("dom.value = "));
+            push_quoted(buffer, value->value);
+            push       (buffer, STRING(";\n"));
         }
 
         auto text = args[context.strings.text];
         do_indent(buffer, indent);
-        push(buffer, STRING("let text = document.createTextNode(\""));
-        push(buffer, text.value);
-        push(buffer, STRING("\");\n"));
+        push       (buffer, STRING("let text = document.createTextNode("));
+        push_quoted(buffer, text.value);
+        push       (buffer, STRING(");\n"));
+
         do_indent(buffer, indent);
         push(buffer, STRING("dom.append(text);\n"));
 
@@ -684,9 +692,9 @@ static void generate_instantiation_js(
 
         if(_for != NULL) {
             do_indent(buffer, indent);
-            push(buffer, STRING("dom.htmlFor = my_for_prefix + \""));
-            push(buffer, for_ident);
-            push(buffer, STRING("\";\n"));
+            push       (buffer, STRING("dom.htmlFor = my_for_prefix + "));
+            push_quoted(buffer, for_ident);
+            push       (buffer, STRING(";\n"));
         }
 
         write_create_tree_node();
@@ -702,16 +710,16 @@ static void generate_instantiation_js(
         write_create_dom(STRING("input"));
 
         do_indent(buffer, indent);
-        push(buffer, STRING("dom.type = \""));
-        push(buffer, type);
-        push(buffer, STRING("\";\n"));
+        push       (buffer, STRING("dom.type = "));
+        push_quoted(buffer, type);
+        push       (buffer, STRING(";\n"));
 
         if(initial != NULL) {
             if(type != context.strings.checkbox) {
                 do_indent(buffer, indent);
-                push(buffer, STRING("dom.value = \""));
-                push(buffer, initial->value);
-                push(buffer, STRING("\";\n"));
+                push       (buffer, STRING("dom.value = "));
+                push_quoted(buffer, initial->value);
+                push       (buffer, STRING(";\n"));
             }
             else {
                 do_indent(buffer, indent);
@@ -731,9 +739,9 @@ static void generate_instantiation_js(
         begin_element();
 
         do_indent(buffer, indent);
-        push(buffer, STRING("let text = document.createTextNode(\""));
-        push(buffer, value);
-        push(buffer, STRING("\");\n"));
+        push       (buffer, STRING("let text = document.createTextNode("));
+        push_quoted(buffer, value);
+        push       (buffer, STRING(");\n"));
 
         do_indent(buffer, indent);
         push(buffer, STRING("dom.append(text);\n"));
