@@ -104,6 +104,7 @@ class Tree_Node {
 
         this.tn_list_insert_new = Tree_Node.prototype._tn_list_insert_new;
         this._tn_list_make_entry = make_entry;
+        this.tn_dom.classList.add("tn_list");
 
         this.tn_is_list = true;
 
@@ -111,14 +112,26 @@ class Tree_Node {
         for(let i = 0; i in this; i += 1) {
             console.assert(this[i] instanceof Tree_Node);
 
-            this[i].tn_remove = Tree_Node.prototype._tn_list_remove;
             this[i].tn_name = i;
+            this[i]._tn_list_itemify();
 
             this.tn_list_count += 1;
         }
 
         console.assert(min <= this.tn_list_count);
         console.assert(max >= this.tn_list_count);
+    }
+
+    _tn_list_itemify() {
+        this.tn_remove = Tree_Node.prototype._tn_list_remove;
+        this.tn_dom.classList.add("tn_list_item");
+        this.tn_dom.classList.add("tn_list_" + this.tn_name);
+    }
+
+    _tn_list_set_name(name) {
+        this.tn_dom.classList.remove("tn_list_" + this.tn_name);
+        this.tn_set_name(name);
+        this.tn_dom.classList.add("tn_list_" + this.tn_name);
     }
 
     _tn_list_insert_new(at) {
@@ -135,13 +148,13 @@ class Tree_Node {
 
         // NOTE(llw): Move others up.
         for(let i = this.tn_list_count - 1; i >= at; i -= 1) {
-            this[i].tn_set_name(i + 1);
+            this[i]._tn_list_set_name(i + 1);
         }
         this.tn_list_count += 1;
 
         // NOTE(llw): Instantiate new element.
         let wrapper = this.tn_add_wrapper(at);
-        wrapper.tn_remove = Tree_Node.prototype._tn_list_remove;
+        wrapper._tn_list_itemify();
         this._tn_list_make_entry(wrapper);
 
         // NOTE(llw): Move to right place in dom.
@@ -163,7 +176,7 @@ class Tree_Node {
 
         // NOTE(llw): Move others down.
         for(let i = at + 1; i < list.tn_list_count; i += 1) {
-            list[i].tn_set_name(i - 1);
+            list[i]._tn_list_set_name(i - 1);
         }
         list.tn_list_count -= 1;
     }
