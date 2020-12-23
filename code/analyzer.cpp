@@ -1003,12 +1003,13 @@ static bool instantiate_list_initials(Expression &expr) {
 
         // NOTE(llw): Build id.
         TEMP_SCOPE(context.temporary);
-        auto index_string = create_array<U8>(context.temporary);
-        serialize_int(i, index_string);
+        auto id_string = create_array<U8>(context.temporary);
+        push(id_string, STRING("tn_list_item_"));
+        push_int(id_string, i);
 
         auto id = Argument {};
         id.type = ARG_STRING;
-        id.value = intern(context.string_table, str(index_string));
+        id.value = intern(context.string_table, str(id_string));
 
         // NOTE(llw): Build wrapper div.
         auto div = Expression {};

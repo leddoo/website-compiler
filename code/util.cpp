@@ -198,3 +198,10 @@ void serialize_int(U64 value, Array<U8> &buffer) {
     reverse(buffer);
 }
 
+void push_int(Array<U8> &buffer, U64 value) {
+    TEMP_SCOPE(context.temporary);
+    auto number = create_array<U8>(context.temporary);
+    serialize_int(value, number);
+    push(buffer, number);
+}
+
