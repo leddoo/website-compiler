@@ -161,6 +161,8 @@ class Tree_Node {
         if(at + 1 < this.tn_list_count) {
             this.tn_dom.insertBefore(wrapper.tn_dom, this[at + 1].tn_dom);
         }
+
+        return this[at];
     }
 
     _tn_list_remove() {
