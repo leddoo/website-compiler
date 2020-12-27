@@ -95,6 +95,9 @@ void setup_context() {
     strings.option  = intern(table, STRING("option"));
     strings.options = intern(table, STRING("options"));
 
+    strings.anchor = intern(table, STRING("anchor"));
+    strings.href   = intern(table, STRING("href"));
+
 
     TEMP_SCOPE(context.temporary);
 

@@ -492,6 +492,15 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             return false;
         }
     }
+    // NOTE(llw): anchor.
+    else if(expr.type == context.strings.anchor) {
+        supports_id = true;
+        supports_body = true;
+
+        if(!validate_arg_type(context.strings.href, ARG_STRING, false)) {
+            return false;
+        }
+    }
     // NOTE(llw): simple types.
     else if(has(context.simple_types, expr.type)) {
         supports_id   = true;

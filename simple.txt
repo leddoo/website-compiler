@@ -274,3 +274,18 @@
     }
 )
 
+
+(div
+    defines: "new_stuff_div"
+    body: {
+        anchor href: "ids.html", body: { "an anchor" }, styles: [ "font-weight: bold" ]
+    }
+)
+
+(page
+    defines: "new_stuff"
+    body: {
+        div inherits: "new_stuff_div"
+    }
+)
+

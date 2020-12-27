@@ -309,6 +309,24 @@ static void generate_html(
         }
         push(html, STRING(">\n"));
     }
+    else if(expr.type == context.strings.anchor) {
+        auto href = get_pointer(args, context.strings.href);
+
+        do_indent(html, html_indent);
+        push(html, STRING("<a"));
+        push(html, id_string);
+        push(html, css_string);
+        if(href != NULL) {
+            push       (html, STRING(" href="));
+            push_quoted(html, href->value);
+        }
+        push(html, STRING(">\n"));
+
+        write_body();
+
+        do_indent(html, html_indent);
+        push(html, STRING("</a>\n"));
+    }
     else if(expr.type == context.strings.text) {
         auto value = args[context.strings.value].value;
 
@@ -764,6 +782,24 @@ static void generate_instantiation_js(
                 push(buffer, initial->value);
                 push(buffer, STRING(";\n"));
             }
+        }
+
+        write_create_tree_node();
+        write_body();
+        end_element();
+    }
+    else if(expr.type == context.strings.anchor) {
+        auto href = get_pointer(args, context.strings.href);
+
+        write_parent_variables();
+        begin_element();
+
+        write_create_dom(STRING("a"));
+        if(href != NULL) {
+            do_indent(buffer, indent);
+            push       (buffer, STRING("dom.href = "));
+            push_quoted(buffer, href->value);
+            push       (buffer, STRING(";\n"));
         }
 
         write_create_tree_node();

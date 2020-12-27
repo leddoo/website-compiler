@@ -39,7 +39,8 @@ extern struct Context {
             _for,
             min, max, locked, initial,
             email, number, date, checkbox,
-            select, option, options;
+            select, option, options,
+            anchor, href;
     } strings;
 
     Map<Interned_String, int> simple_types;
