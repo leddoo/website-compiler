@@ -695,6 +695,35 @@ static bool validate(Symbol &symbol) {
 }
 
 
+static void merge_arguments(
+    Map<Interned_String, Argument> &dest,
+    const Map<Interned_String, Argument> &src
+) {
+    for(Usize i = 0; i < src.count; i += 1) {
+        auto name = src.entries[i].key;
+        auto value = src.entries[i].value;
+
+        if(    name == context.strings.style_sheets
+            || name == context.strings.scripts
+            || name == context.strings.classes
+            || name == context.strings.styles
+        ) {
+            auto &list = value.list;
+            auto dest_values = get_pointer(dest, name);
+            if(dest_values) {
+                push_at(dest_values->list, 0, list);
+            }
+            else {
+                insert(dest, name, value);
+            }
+        }
+        else {
+            insert_maybe(dest, name, value);
+        }
+    }
+}
+
+
 static bool insert_arguments(
     Argument &arg,
     const Map<Interned_String, Argument> parameters
@@ -728,7 +757,6 @@ static bool insert_arguments(
             auto &block = arg.block;
             for(Usize i = 0; i < block.count; ) {
                 auto &expr = block[i];
-                auto &args = expr.arguments;
 
                 // NOTE(llw): Expression is to be replaced completely.
                 auto replace = get_pointer(parameters, expr.type);
@@ -738,11 +766,10 @@ static bool insert_arguments(
                         expr.type = replace->value;
                     }
                     else if(replace->type == ARG_BLOCK) {
-                        if(args.count > 0) {
-                            printf("Cannot insert expressions. Original expression has arguments.\n");
-                            return false;
-                        }
+                        // NOTE(llw): Back up arguments before replacing.
+                        auto args = expr.arguments;
 
+                        // NOTE(llw): Replace expr with the block's expressions.
                         auto amount = replace->block.count;
                         if(amount > 0) {
                             // NOTE(llw): Like push_at but removes block[i].
@@ -752,6 +779,17 @@ static bool insert_arguments(
                         else {
                             remove_at(block, i);
                         }
+
+                        // NOTE(llw): Args only allowed if inserting at most one expression.
+                        if(args.count > 0 && amount > 1) {
+                            printf("Cannot insert expressions. Original expression has arguments.\n");
+                            return false;
+                        }
+
+                        if(amount == 1) {
+                            merge_arguments(block[i].arguments, args);
+                        }
+
 
                         // NOTE(llw): Skip inserted expressions.
                         i += amount;
@@ -765,6 +803,7 @@ static bool insert_arguments(
                 }
 
                 // NOTE(llw): Replace expression arguments.
+                auto &args = expr.arguments;
                 for(Usize j = 0; j < args.count; j += 1) {
                     if(!insert_arguments(args.entries[j].value, parameters)) {
                         return false;
@@ -905,30 +944,7 @@ static bool instantiate_and_merge(Expression &reference, Argument inherits) {
     remove(inst_args, context.strings.defines);
     remove(def_args, context.strings.inherits);
 
-    // NOTE(llw): Merge.
-    for(Usize i = 0; i < inst_args.count; i += 1) {
-        auto name = inst_args.entries[i].key;
-        auto value = inst_args.entries[i].value;
-
-        if(    name == context.strings.style_sheets
-            || name == context.strings.scripts
-            || name == context.strings.classes
-            || name == context.strings.styles
-        ) {
-            auto &list = value.list;
-            auto def_values = get_pointer(def_args, name);
-            if(def_values) {
-                push(list, def_values->list);
-                def_values->list = list;
-            }
-            else {
-                insert(def_args, name, value);
-            }
-        }
-        else {
-            insert_maybe(def_args, name, value);
-        }
-    }
+    merge_arguments(def_args, inst_args);
 
     return true;
 };

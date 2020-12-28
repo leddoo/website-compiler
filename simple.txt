@@ -282,10 +282,23 @@
     }
 )
 
+(div
+    defines: "insert_merge_args"
+    parameters: [ single_expression ]
+    body: {
+        single_expression id: "foo", classes: [ "a" ]
+    }
+)
+
 (page
     defines: "new_stuff"
     body: {
         div inherits: "new_stuff_div"
+
+        div inherits: "insert_merge_args", single_expression: { }
+        div inherits: "insert_merge_args", single_expression: { h1 }
+        div inherits: "insert_merge_args", single_expression: { h1 id: "bar" }
+        div inherits: "insert_merge_args", single_expression: { h1 id: "baz", classes: [ "b" ] }
     }
 )
 
