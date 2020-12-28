@@ -63,11 +63,13 @@ class Tree_Node {
 
 
     tn_clear() {
-        let me = this;
-        me.tn_for(function(entry) {
-            delete me[entry.tn_name];
-        });
-        me.tn_dom.innerHTML = "";
+        let entries = [];
+        this.tn_for(function(entry) { entries.push(entry); });
+        for(const entry of entries) {
+            entry.tn_remove();
+        }
+
+        this.tn_dom.innerHTML = "";
     }
 
 
