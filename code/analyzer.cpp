@@ -711,7 +711,7 @@ static void merge_arguments(
             auto &list = value.list;
             auto dest_values = get_pointer(dest, name);
             if(dest_values) {
-                push_at(dest_values->list, 0, list);
+                push_front(dest_values->list, list);
             }
             else {
                 insert(dest, name, value);
