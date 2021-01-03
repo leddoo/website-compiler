@@ -257,19 +257,22 @@ static void generate_html(
         end_element(context.strings.select);
     }
     else if(expr.type == context.strings.option) {
+        auto text = args[context.strings.text];
         auto value = get_pointer(args, context.strings.value);
 
         do_indent(html, html_indent);
         push(html, STRING("<option"));
         push(html, id_string);
         push(html, css_string);
+        push(html, STRING(" value="));
         if(value != NULL) {
-            push(html, STRING(" value="));
             push_quoted(html, value->value);
+        }
+        else {
+            push_quoted(html, text.value);
         }
         push(html, STRING(">\n"));
 
-        auto text = args[context.strings.text];
         do_indent(html, html_indent + 1);
         push(html, text.value);
         push(html, STRING("\n"));
@@ -714,35 +717,24 @@ static void generate_instantiation_js(
 
         const auto &options = args[context.strings.options].block;
         for(Usize i = 0; i < options.count; i += 1) {
-            generate_instantiation_js(
-                options[i],
-                buffer, indent
-            );
-        }
+            const auto &args = options[i].arguments;
 
-        end_element();
-    }
-    else if(expr.type == context.strings.option) {
-        write_parent_variables();
-        begin_element();
-        write_create_dom(STRING("option"));
-
-        auto value = get_pointer(args, context.strings.value);
-        if(value != NULL) {
             do_indent(buffer, indent);
-            push       (buffer, STRING("dom.value = "));
-            push_quoted(buffer, value->value);
-            push       (buffer, STRING(";\n"));
+            push(buffer, STRING("dom.options[dom.options.length] = new Option("));
+
+            auto text = args[context.strings.text].value;
+            push_quoted(buffer, text);
+            push(buffer, STRING(", "));
+
+            auto value = get_pointer(args, context.strings.value);
+            if(value != NULL) {
+                push_quoted(buffer, value->value);
+            }
+            else {
+                push_quoted(buffer, text);
+            }
+            push(buffer, STRING(");\n"));
         }
-
-        auto text = args[context.strings.text];
-        do_indent(buffer, indent);
-        push       (buffer, STRING("let text = document.createTextNode("));
-        push_quoted(buffer, text.value);
-        push       (buffer, STRING(");\n"));
-
-        do_indent(buffer, indent);
-        push(buffer, STRING("dom.append(text);\n"));
 
         end_element();
     }
