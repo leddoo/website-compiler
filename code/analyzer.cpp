@@ -215,6 +215,22 @@ static bool validate(const Expression &expr, Validate_Context vc) {
         return validate_arg_list_p(name, type, required, arg);
     };
 
+    auto validate_required = [&]() {
+        auto required = get_pointer(args, context.strings.required);
+        if(!validate_arg_type_p(context.strings.required, ARG_NUMBER, false, required)) {
+            return false;
+        }
+
+        if(required != NULL) {
+            if(parse_int(context.string_table[required->value]) != 1) {
+                printf("Error: 'required' must be 1.\n");
+                return false;
+            }
+        }
+
+        return true;
+    };
+
 
 
     auto defines    = get_pointer(args, context.strings.defines);
@@ -390,12 +406,17 @@ static bool validate(const Expression &expr, Validate_Context vc) {
                     return false;
                 }
 
-                // NOTE(llw): required.
+                // NOTE(llw): text is required.
                 auto text = get_pointer(args, context.strings.text);
                 if(text == NULL || text->type != ARG_STRING) {
                     printf("Error: Option text must be a string.\n");
                     return false;
                 }
+            }
+
+            // NOTE(llw): validation options.
+            if(!validate_required()) {
+                return false;
             }
         }
         else {
@@ -467,6 +488,32 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             else {
                 printf("Invalid input type.\n");
                 return false;
+            }
+
+            // NOTE(llw): validation options.
+            if(!validate_required()) {
+                return false;
+            }
+
+            if(    type->value == context.strings.text
+                || type->value == context.strings.email
+            ) {
+                auto min_length = get_pointer(args, context.strings.min_length);
+                auto max_length = get_pointer(args, context.strings.max_length);
+                if(    !validate_arg_type_p(context.strings.min_length, ARG_NUMBER, false, min_length)
+                    || !validate_arg_type_p(context.strings.max_length, ARG_NUMBER, false, max_length)
+                ) {
+                    return false;
+                }
+
+                if(min_length != NULL && max_length != NULL) {
+                    if(   parse_int(context.string_table[min_length->value])
+                        > parse_int(context.string_table[max_length->value])
+                    ) {
+                        printf("Error: 'min_length' must not be greater than 'max_length'.\n");
+                        return false;
+                    }
+                }
             }
         }
         else {

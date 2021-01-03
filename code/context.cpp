@@ -98,6 +98,10 @@ void setup_context() {
     strings.anchor = intern(table, STRING("anchor"));
     strings.href   = intern(table, STRING("href"));
 
+    strings.required   = intern(table, STRING("required"));
+    strings.min_length = intern(table, STRING("min_length"));
+    strings.max_length = intern(table, STRING("max_length"));
+
 
     TEMP_SCOPE(context.temporary);
 

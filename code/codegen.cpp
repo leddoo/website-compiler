@@ -236,7 +236,14 @@ static void generate_html(
         write_simple_element(context.strings.div);
     }
     else if(expr.type == context.strings.select) {
-        begin_simple_element(context.strings.select);
+        do_indent(html, html_indent);
+        push(html, STRING("<select"));
+        push(html, id_string);
+        push(html, css_string);
+        if(has(args, context.strings.required)) {
+            push(html, STRING(" required"));
+        }
+        push(html, STRING(">\n"));
 
         const auto &options = args[context.strings.options].block;
         for(Usize i = 0; i < options.count; i += 1) {
@@ -288,6 +295,9 @@ static void generate_html(
     else if(expr.type == context.strings.input) {
         auto type  = args[context.strings.type].value;
         auto initial = get_pointer(args, context.strings.initial);
+        auto min_length = get_pointer(args, context.strings.min_length);
+        auto max_length = get_pointer(args, context.strings.max_length);
+
 
         do_indent(html, html_indent);
         push(html, STRING("<input"));
@@ -306,6 +316,17 @@ static void generate_html(
                     push(html, STRING(" checked"));
                 }
             }
+        }
+        if(has(args, context.strings.required)) {
+            push(html, STRING(" required"));
+        }
+        if(min_length != NULL) {
+            push       (html, STRING(" minLength="));
+            push_quoted(html, min_length->value);
+        }
+        if(max_length != NULL) {
+            push       (html, STRING(" maxLength="));
+            push_quoted(html, max_length->value);
         }
         push(html, STRING(">\n"));
     }
@@ -684,6 +705,11 @@ static void generate_instantiation_js(
         write_parent_variables();
         begin_element();
         write_create_dom(STRING("select"));
+        if(has(args, context.strings.required)) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("dom.required = true;\n"));
+        }
+
         write_create_tree_node();
 
         const auto &options = args[context.strings.options].block;
@@ -768,6 +794,26 @@ static void generate_instantiation_js(
         push       (buffer, STRING("dom.type = "));
         push_quoted(buffer, type);
         push       (buffer, STRING(";\n"));
+
+        // NOTE(llw): Validation.
+        auto min_length = get_pointer(args, context.strings.min_length);
+        auto max_length = get_pointer(args, context.strings.max_length);
+        if(has(args, context.strings.required)) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("dom.required = true;\n"));
+        }
+        if(min_length != NULL) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("dom.minLength = "));
+            push(buffer, min_length->value);
+            push(buffer, STRING(";\n"));
+        }
+        if(max_length != NULL) {
+            do_indent(buffer, indent);
+            push(buffer, STRING("dom.maxLength = "));
+            push(buffer, max_length->value);
+            push(buffer, STRING(";\n"));
+        }
 
         if(initial != NULL) {
             if(type != context.strings.checkbox) {

@@ -290,6 +290,23 @@
     }
 )
 
+(div
+    defines: "validation"
+    body: {
+        select required: 1, id: "select", options: {
+            option text: ""
+            option text: "yes"
+            option text: "no"
+        }
+
+        input min_length: 5, max_length: 7, id: "text_1", type: "text"
+
+        input required: 1, max_length: 7, id: "text_2", type: "text"
+
+        input required: 1, min_length: 2, id: "text_3", type: "text"
+    }
+)
+
 (page
     defines: "new_stuff"
     body: {
@@ -299,6 +316,8 @@
         div inherits: "insert_merge_args", single_expression: { h1 }
         div inherits: "insert_merge_args", single_expression: { h1 id: "bar" }
         div inherits: "insert_merge_args", single_expression: { h1 id: "baz", classes: [ "b" ] }
+
+        div inherits: "validation"
     }
 )
 

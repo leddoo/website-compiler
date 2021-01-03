@@ -40,7 +40,8 @@ extern struct Context {
             min, max, locked, initial,
             email, number, date, checkbox,
             select, option, options,
-            anchor, href;
+            anchor, href,
+            required, min_length, max_length;
     } strings;
 
     Map<Interned_String, int> simple_types;
