@@ -805,6 +805,14 @@ static bool insert_arguments(
             for(Usize i = 0; i < block.count; ) {
                 auto &expr = block[i];
 
+                // NOTE(llw): Replace expression arguments.
+                auto &args = expr.arguments;
+                for(Usize j = 0; j < args.count; j += 1) {
+                    if(!insert_arguments(args.entries[j].value, parameters)) {
+                        return false;
+                    }
+                }
+
                 // NOTE(llw): Expression is to be replaced completely.
                 auto replace = get_pointer(parameters, expr.type);
                 if(replace) {
@@ -847,14 +855,6 @@ static bool insert_arguments(
                         return false;
                     }
 
-                }
-
-                // NOTE(llw): Replace expression arguments.
-                auto &args = expr.arguments;
-                for(Usize j = 0; j < args.count; j += 1) {
-                    if(!insert_arguments(args.entries[j].value, parameters)) {
-                        return false;
-                    }
                 }
 
                 i += 1;
