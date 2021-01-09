@@ -472,6 +472,9 @@ static bool validate(const Expression &expr, Validate_Context vc) {
             else if(type->value == context.strings.date) {
                 // ok.
             }
+            else if(type->value == context.strings.time) {
+                // ok.
+            }
             else if(type->value == context.strings.checkbox) {
                 if(!validate_arg_type_p(context.strings.initial, ARG_NUMBER, false, initial)) {
                     return false;

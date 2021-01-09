@@ -208,19 +208,25 @@
 
 (input
     defines: "number_input"
-    parameters: []
+    id: "foo"
     type: "number", initial: 42
 )
 
 (input
     defines: "date_input"
-    parameters: []
+    id: "foo"
     type: "date"
 )
 
 (input
+    defines: "time_input"
+    id: "foo"
+    type: "time"
+)
+
+(input
     defines: "checkbox_input"
-    parameters: []
+    id: "foo"
     type: "checkbox"
     initial: 1
 )
@@ -236,6 +242,7 @@
     body: {
         input id: "number", inherits: "number_input"
         input id: "date",   inherits: "date_input"
+        input id: "time",   inherits: "time_input"
         input id: "check",  inherits: "checkbox_input"
 
         button id: "button", inherits: "button", body: { "foo" }

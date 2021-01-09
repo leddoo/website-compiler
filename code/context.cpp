@@ -89,6 +89,7 @@ void setup_context() {
     strings.email  = intern(table, STRING("email"));
     strings.number = intern(table, STRING("number"));
     strings.date   = intern(table, STRING("date"));
+    strings.time   = intern(table, STRING("time"));
     strings.checkbox = intern(table, STRING("checkbox"));
 
     strings.select  = intern(table, STRING("select"));
