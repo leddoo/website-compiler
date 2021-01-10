@@ -488,6 +488,9 @@ static bool validate(const Expression &expr, Validate_Context vc) {
                     }
                 }
             }
+            else if(type->value == context.strings.file) {
+                // ok.
+            }
             else {
                 printf("Invalid input type.\n");
                 return false;

@@ -91,6 +91,7 @@ void setup_context() {
     strings.date   = intern(table, STRING("date"));
     strings.time   = intern(table, STRING("time"));
     strings.checkbox = intern(table, STRING("checkbox"));
+    strings.file     = intern(table, STRING("file"));
 
     strings.select  = intern(table, STRING("select"));
     strings.option  = intern(table, STRING("option"));

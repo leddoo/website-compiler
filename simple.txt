@@ -231,6 +231,12 @@
     initial: 1
 )
 
+(input
+    defines: "file_input"
+    id: "foo"
+    type: "file"
+)
+
 (button
     defines: "button"
     parameters: [ body ]
@@ -244,6 +250,7 @@
         input id: "date",   inherits: "date_input"
         input id: "time",   inherits: "time_input"
         input id: "check",  inherits: "checkbox_input"
+        input id: "file",   inherits: "file_input"
 
         button id: "button", inherits: "button", body: { "foo" }
     }

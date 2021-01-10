@@ -38,7 +38,7 @@ extern struct Context {
             label, input, button,
             _for,
             min, max, locked, initial,
-            email, number, date, time, checkbox,
+            email, number, date, time, checkbox, file,
             select, option, options,
             anchor, href,
             required, min_length, max_length;
