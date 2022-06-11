@@ -397,6 +397,13 @@ static void generate_html(
 
 }
 
+static void push_quoted_file(Array<U8> &buffer, Interned_String file) {
+    push(buffer, STRING("\""));
+    push(buffer, context.deploy_file_prefix);
+    push(buffer, file);
+    push(buffer, STRING("\""));
+}
+
 static Array<U8> generate_html(const Expression &page) {
     assert(page.type == context.strings.page);
 
@@ -427,9 +434,9 @@ static Array<U8> generate_html(const Expression &page) {
     auto icon = get_pointer(page.arguments, context.strings.icon);
     if(icon != NULL) {
         do_indent(html, 1);
-        push       (html, STRING("<link rel=\"icon\" href="));
-        push_quoted(html, icon->value);
-        push       (html, STRING(">\n"));
+        push(html, STRING("<link rel=\"icon\" href="));
+        push_quoted_file(html, icon->value);
+        push(html, STRING(">\n"));
     }
 
     auto style_sheets = get_pointer(page.arguments, context.strings.style_sheets);
@@ -437,9 +444,9 @@ static Array<U8> generate_html(const Expression &page) {
         const auto &list = style_sheets->list;
         for(Usize i = 0; i < list.count; i += 1) {
             do_indent(html, 1);
-            push       (html, STRING("<link rel=\"stylesheet\" href="));
-            push_quoted(html, list[i].value);
-            push       (html, STRING(">\n"));
+            push(html, STRING("<link rel=\"stylesheet\" href="));
+            push_quoted_file(html, list[i].value);
+            push(html, STRING(">\n"));
         }
     }
 
@@ -448,9 +455,9 @@ static Array<U8> generate_html(const Expression &page) {
         const auto &list = scripts->list;
         for(Usize i = 0; i < list.count; i += 1) {
             do_indent(html, 1);
-            push       (html, STRING("<script src="));
-            push_quoted(html, list[i].value);
-            push       (html, STRING("></script>\n"));
+            push(html, STRING("<script src="));
+            push_quoted_file(html, list[i].value);
+            push(html, STRING("></script>\n"));
         }
     }
 

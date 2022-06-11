@@ -123,6 +123,8 @@ void setup_context() {
     insert(context.simple_types, strings.p, 0);
     insert(context.simple_types, strings.span, 0);
     insert(context.simple_types, strings.button, 0);
+
+    context.deploy_file_prefix = context.strings.empty_string;
 }
 
 
@@ -249,6 +251,16 @@ bool parse_arguments(int argument_count, const char **arguments) {
                 }
 
                 context.output_prefix = intern_path(path);
+            }
+            else if(string[1] == 'p') {
+                i += 1;
+                if(i >= argument_count) {
+                    printf("'-p' requires an argument.\n");
+                    return false;
+                }
+
+                auto prefix = arguments[i];
+                context.deploy_file_prefix = intern(context.string_table, prefix);
             }
             else {
                 printf("Invalid argument '%s'\n", string);

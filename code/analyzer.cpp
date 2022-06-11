@@ -1142,6 +1142,11 @@ static Expression *instantiate(const Expression &expr) {
                 insert_maybe(context.referenced_files, list[i].value, 0);
             }
         }
+
+        auto icon = get_pointer(result->arguments, context.strings.icon);
+        if(icon) {
+            insert_maybe(context.referenced_files, icon->value, 0);
+        }
     }
 
     // NOTE(llw): Add default scripts.

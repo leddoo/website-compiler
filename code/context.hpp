@@ -62,6 +62,7 @@ extern struct Context {
     Interned_String output_prefix;
     Array<Source> outputs;
     Map<Interned_String, int> referenced_files;
+    Interned_String deploy_file_prefix;
 
 } context;
 
