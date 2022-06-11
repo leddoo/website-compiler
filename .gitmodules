@@ -1,3 +1,0 @@
-[submodule "libcpp"]
-	path = libcpp
-	url = ssh://gitea@leddoo.net/leddoo/libcpp
