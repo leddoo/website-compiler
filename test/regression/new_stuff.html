@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="runtime.js"></script>
+    <script src="instantiate.js"></script>
+</head>
+
+<body>
+    <div id="page">
+        <div>
+            <a style="font-weight: bold" href="ids.html">
+                an anchor
+            </a>
+        </div>
+        <div>
+        </div>
+        <div>
+            <h1 id="page-foo" class="a">
+            </h1>
+        </div>
+        <div>
+            <h1 id="page-bar" class="a">
+            </h1>
+        </div>
+        <div>
+            <h1 id="page-baz" class="a b">
+            </h1>
+        </div>
+        <div>
+            <select id="page-select" required>
+                <option value="">
+                    
+                </option>
+                <option value="yes">
+                    yes
+                </option>
+                <option value="no">
+                    no
+                </option>
+            </select>
+            <input id="page-text_1" type="text" minLength="5" maxLength="7">
+            <input id="page-text_2" type="text" required maxLength="7">
+            <input id="page-text_3" type="text" required minLength="2">
+        </div>
+    </div>
+    <script>
+        (function() {
+            let me = new Tree_Node(null, document.getElementById("page"), "page");
+            window.page = me;
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-foo"), "foo");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-bar"), "bar");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-baz"), "baz");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-select"), "select");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-text_1"), "text_1");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-text_2"), "text_2");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-text_3"), "text_3");
+            }
+        })();
+    </script>
+</body>
+
+</html>
+

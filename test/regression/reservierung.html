@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Reservierung</title>
+    <link rel="icon" href="base_icon.ico">
+    <link rel="stylesheet" href="main.css">
+    <link rel="stylesheet" href="register.css">
+    <script src="runtime.js"></script>
+    <script src="instantiate.js"></script>
+    <script src="main.js"></script>
+    <script src="register.js"></script>
+</head>
+
+<body>
+    <div id="page">
+        <h1>
+            header
+        </h1>
+        <h1 id="page-foo">
+            Title
+        </h1>
+        <div id="page-yeet">
+            <p id="page-bar">
+                Have a paragraph!
+            </p>
+            <p id="page-yeet-bar">
+                And another one.
+            </p>
+        </div>
+        <h1>
+            footer
+        </h1>
+        <h1>
+            finally
+        </h1>
+        <span>
+            foo as text
+        </span>
+    </div>
+    <script>
+        (function() {
+            let me = new Tree_Node(null, document.getElementById("page"), "page");
+            window.page = me;
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-foo"), "foo");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-yeet"), "yeet");
+                
+                var my_tree_parent = window.page;
+                {
+                    let me = new Tree_Node(my_tree_parent, document.getElementById("page-bar"), "bar");
+                }
+                
+                var my_tree_parent = me;
+                {
+                    let me = new Tree_Node(my_tree_parent, document.getElementById("page-yeet-bar"), "bar");
+                }
+            }
+        })();
+    </script>
+</body>
+
+</html>
+

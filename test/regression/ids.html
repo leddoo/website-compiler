@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="runtime.js"></script>
+    <script src="instantiate.js"></script>
+</head>
+
+<body>
+    <div id="page">
+        <div id="page-outer">
+            <div id="page-outer-inner">
+            </div>
+            <div id="page-global">
+            </div>
+            <div id="html">
+                <div id="page-outer-content">
+                </div>
+            </div>
+            <label for="html">
+            </label>
+        </div>
+    </div>
+    <script>
+        (function() {
+            let me = new Tree_Node(null, document.getElementById("page"), "page");
+            window.page = me;
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-outer"), "outer");
+                
+                var my_tree_parent = me;
+                {
+                    let me = new Tree_Node(my_tree_parent, document.getElementById("page-outer-inner"), "inner");
+                }
+                
+                var my_tree_parent = window.page;
+                {
+                    let me = new Tree_Node(my_tree_parent, document.getElementById("page-global"), "global");
+                }
+                
+                var my_tree_parent = me;
+                {
+                    let me = new Tree_Node(my_tree_parent, document.getElementById("page-outer-content"), "content");
+                }
+            }
+        })();
+    </script>
+</body>
+
+</html>
+

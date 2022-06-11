@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="runtime.js"></script>
+    <script src="instantiate.js"></script>
+</head>
+
+<body>
+    <div id="page">
+        <div id="page-x1" class="x0 x1">
+            hi
+        </div>
+    </div>
+    <script>
+        (function() {
+            let me = new Tree_Node(null, document.getElementById("page"), "page");
+            window.page = me;
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-x1"), "x1");
+            }
+        })();
+    </script>
+</body>
+
+</html>
+

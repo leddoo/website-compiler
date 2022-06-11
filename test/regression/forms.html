@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="runtime.js"></script>
+    <script src="instantiate.js"></script>
+</head>
+
+<body>
+    <div id="page">
+        <div id="page-test">
+            <div>
+                <div id="page-test-hi">
+                </div>
+            </div>
+        </div>
+        <div>
+        </div>
+        <form>
+            <label for="page-name">
+                Name
+            </label>
+            <input id="page-name" type="text" value="hi">
+            <label for="page-email">
+                E-Mail
+            </label>
+            <input id="page-email" type="email" value="a@b">
+            <div class="desktop spacer_4">
+            </div>
+            <div class="mobile spacer_3">
+            </div>
+        </form>
+    </div>
+    <script>
+        (function() {
+            let me = new Tree_Node(null, document.getElementById("page"), "page");
+            window.page = me;
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-test"), "test");
+                
+                var my_tree_parent = me;
+                {
+                    let me = new Tree_Node(my_tree_parent, document.getElementById("page-test-hi"), "hi");
+                }
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-name"), "name");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-email"), "email");
+            }
+        })();
+    </script>
+</body>
+
+</html>
+

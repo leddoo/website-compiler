@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <script src="runtime.js"></script>
+    <script src="instantiate.js"></script>
+</head>
+
+<body>
+    <div id="page">
+        <select id="page-select">
+            <option value="0">
+                a
+            </option>
+            <option value="1">
+                b
+            </option>
+            <option value="c">
+                c
+            </option>
+        </select>
+        <div>
+            <input id="page-number" type="number" value="42">
+            <input id="page-date" type="date">
+            <input id="page-time" type="time">
+            <input id="page-check" type="checkbox" checked>
+            <input id="page-file" type="file">
+            <button id="page-button">
+                foo
+            </button>
+        </div>
+        <div class="some_class" style="width: 50px; height: 50px; background-color: green">
+        </div>
+        <div>
+            <input id="page-nice" type="number" value="69">
+        </div>
+    </div>
+    <script>
+        (function() {
+            let me = new Tree_Node(null, document.getElementById("page"), "page");
+            window.page = me;
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-select"), "select");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-number"), "number");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-date"), "date");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-time"), "time");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-check"), "check");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-file"), "file");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-button"), "button");
+            }
+            
+            var my_tree_parent = me;
+            {
+                let me = new Tree_Node(my_tree_parent, document.getElementById("page-nice"), "nice");
+            }
+        })();
+    </script>
+</body>
+
+</html>
+
